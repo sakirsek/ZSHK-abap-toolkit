@@ -13,7 +13,6 @@ Personal, portable library — pull into any SAP system via [abapGit](https://ab
 | **FTP** | `ZCL_SHK_FTP` | FTP upload/download, directory listing, error handling | Planned |
 | **HTTP** | `ZCL_SHK_HTTP` | REST client — GET/POST/PUT/DELETE, JSON, timeout, Turkish charset | Planned |
 | **BDC** | `ZCL_SHK_BDC` | Batch Data Communication wrapper — screen/field builder, BAPIRET2 errors | Planned |
-| **Excel** | `ZCL_SHK_EXCEL` | Internal table to XLSX conversion | Planned |
 
 ## Installation
 

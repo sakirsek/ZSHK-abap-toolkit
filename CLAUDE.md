@@ -72,7 +72,6 @@ Yeni bir sisteme kurulum: ZABAPGIT'ten `https://github.com/sakirsek/ZSHK-abap-to
 | **FTP** | `ZCL_SHK_FTP` | Upload/download, dizin listeleme, hata yönetimi | Planlandı |
 | **HTTP** | `ZCL_SHK_HTTP` | REST client: GET/POST/PUT/DELETE, JSON parse, timeout, Türkçe karakter | Planlandı |
 | **BDC** | `ZCL_SHK_BDC` | CALL TRANSACTION wrapper: ekran/alan ekleme, hata dönüşü BAPIRET2 | Planlandı |
-| **Excel** | `ZCL_SHK_EXCEL` | İç tablo → XLSX üretme, mail'e ek olarak ekleme | Planlandı |
 
 ### Öncelik 2 — muhtemelen yapılacak
 
@@ -100,6 +99,24 @@ Yeni bir sisteme kurulum: ZABAPGIT'ten `https://github.com/sakirsek/ZSHK-abap-to
 | `keremkoseoglu/Simbal` | BAL log API tasarımı (add_* → save → show) | — |
 | `keremkoseoglu/addict` | Multiton/lazy init pattern | 37 sınıf + 22 exception (over-engineering) |
 | `keremkoseoglu/ticksys` | Strategy pattern (interface-based) | Jira'ya özgü, kapsam dışı |
+
+## Uygulama yol haritası
+
+| Faz | Ne | Sıra | Push |
+|---|---|---|---|
+| **0** | Altyapı | ZSHK_MSG mesaj sınıfı | Pushla |
+| **1** | Log | ZCX → ZIF → ZCL_SHK_LOG | Pushla |
+| **2** | BDC | ZCX → ZIF → ZCL_SHK_BDC | Pushla |
+| **3** | Mail | ZSHK_S_MAIL_COLUMN → ZCX → ZIF → ZCL_SHK_MAIL | Pushla |
+| **4** | FTP | ZSHK_S_FTP_FILE → ZCX → ZIF → ZCL_SHK_FTP | Pushla |
+| **5** | HTTP | ZSHK_S_NAME_VALUE → ZCX → ZIF → ZCL_SHK_HTTP | Pushla |
+| **6** | Final | README + CLAUDE.md güncelle | Pushla |
+
+Tüm nesneler tek transport: `NEDK928959`. Detaylı spec'ler `.claude/memory/` altında. "Başla" dendiğinde Faz 0'dan itibaren sırayla ilerle, karar sorma.
+
+## README bakımı
+
+Her modül geliştirmesi tamamlandığında `README.md`'deki ilgili modülün durumunu güncelle (Planned → Done) ve varsa kullanım örneği ekle. README, projenin güncel vitrinini yansıtmalı.
 
 ## MCP ile çalışma notları
 
