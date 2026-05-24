@@ -6,6 +6,56 @@
     <ARBGB>ZSHK_MSG</ARBGB>
     <STEXT>ZSHK Toolkit Message Class</STEXT>
    </T100A>
+   <T100>
+    <T100>
+     <SPRSL>T</SPRSL>
+     <ARBGB>ZSHK_MSG</ARBGB>
+     <MSGNR>001</MSGNR>
+     <TEXT>&amp;1</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>T</SPRSL>
+     <ARBGB>ZSHK_MSG</ARBGB>
+     <MSGNR>002</MSGNR>
+     <TEXT>İşlem başarıyla tamamlandı: &amp;1</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>T</SPRSL>
+     <ARBGB>ZSHK_MSG</ARBGB>
+     <MSGNR>003</MSGNR>
+     <TEXT>&amp;1 nesnesi bulunamadı</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>T</SPRSL>
+     <ARBGB>ZSHK_MSG</ARBGB>
+     <MSGNR>004</MSGNR>
+     <TEXT>&amp;1 parametresi zorunludur</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>T</SPRSL>
+     <ARBGB>ZSHK_MSG</ARBGB>
+     <MSGNR>005</MSGNR>
+     <TEXT>&amp;1 için geçersiz değer: &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>T</SPRSL>
+     <ARBGB>ZSHK_MSG</ARBGB>
+     <MSGNR>006</MSGNR>
+     <TEXT>Bağlantı hatası: &amp;1</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>T</SPRSL>
+     <ARBGB>ZSHK_MSG</ARBGB>
+     <MSGNR>007</MSGNR>
+     <TEXT>Yetki hatası: &amp;1</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>T</SPRSL>
+     <ARBGB>ZSHK_MSG</ARBGB>
+     <MSGNR>008</MSGNR>
+     <TEXT>Beklenmeyen hata: &amp;1 &amp;2 &amp;3 &amp;4</TEXT>
+    </T100>
+   </T100>
    <I18N_LANGS>
     <LANGU/>
    </I18N_LANGS>
@@ -47,6 +97,46 @@
     <item>
      <MSGNR>008</MSGNR>
      <TEXT>Beklenmeyen hata: &amp;1 &amp;2 &amp;3 &amp;4</TEXT>
+    </item>
+    <item>
+     <SPRSL>E</SPRSL>
+     <MSGNR>001</MSGNR>
+     <TEXT>&amp;1</TEXT>
+    </item>
+    <item>
+     <SPRSL>E</SPRSL>
+     <MSGNR>002</MSGNR>
+     <TEXT>Operation completed successfully: &amp;1</TEXT>
+    </item>
+    <item>
+     <SPRSL>E</SPRSL>
+     <MSGNR>003</MSGNR>
+     <TEXT>Object &amp;1 not found</TEXT>
+    </item>
+    <item>
+     <SPRSL>E</SPRSL>
+     <MSGNR>004</MSGNR>
+     <TEXT>Parameter &amp;1 is required</TEXT>
+    </item>
+    <item>
+     <SPRSL>E</SPRSL>
+     <MSGNR>005</MSGNR>
+     <TEXT>Invalid value for &amp;1: &amp;2</TEXT>
+    </item>
+    <item>
+     <SPRSL>E</SPRSL>
+     <MSGNR>006</MSGNR>
+     <TEXT>Connection error: &amp;1</TEXT>
+    </item>
+    <item>
+     <SPRSL>E</SPRSL>
+     <MSGNR>007</MSGNR>
+     <TEXT>Authorization error: &amp;1</TEXT>
+    </item>
+    <item>
+     <SPRSL>E</SPRSL>
+     <MSGNR>008</MSGNR>
+     <TEXT>Unexpected error: &amp;1 &amp;2 &amp;3 &amp;4</TEXT>
     </item>
    </T100_TEXTS>
   </asx:values>
