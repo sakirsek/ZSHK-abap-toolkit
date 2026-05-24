@@ -18,7 +18,6 @@ Personal, portable library — pull into any SAP system via [abapGit](https://ab
 | **Progress** | `ZCL_SHK_PROGRESS` | Progress indicator with ETA estimation | Done |
 | **Return** | `ZCL_SHK_RETURN` | BAPIRET2 factory — create from text/sy-msg/exception, collect errors | Done |
 | **CSV** | `ZCL_SHK_CSV` | Internal table to CSV and back, Turkish charset support | Done |
-| **PDF** | `ZCL_SHK_PDF` | Smartform OTF to binary PDF conversion | Done |
 
 ## Usage
 
@@ -111,12 +110,6 @@ DATA(lv_csv) = zcl_shk_csv=>table_to_csv( it_table = lt_data iv_separator = ';' 
 zcl_shk_csv=>csv_to_table( EXPORTING iv_csv = lv_csv CHANGING ct_table = lt_result ).
 ```
 
-### PDF
-
-```abap
-DATA(lv_pdf) = zcl_shk_pdf=>from_otf( lt_otf_data ).
-```
-
 ## Demo Programs
 
 Each module has a runnable demo program (`SE38`):
@@ -133,7 +126,6 @@ Each module has a runnable demo program (`SE38`):
 | `ZSHK_DEMO_PROGRESS` | Progress | Standalone — shows progress bar with ETA |
 | `ZSHK_DEMO_RETURN` | Return | Standalone — BAPIRET2 factory and utilities |
 | `ZSHK_DEMO_CSV` | CSV | Standalone — table/CSV round-trip conversion |
-| `ZSHK_DEMO_PDF` | PDF | Requires a Smartform name (default: SF_EXAMPLE_01) |
 
 ## Installation
 
