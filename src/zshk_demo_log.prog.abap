@@ -56,24 +56,32 @@ START-OF-SELECTION.
   DATA(lt_messages) = lo_log->zif_shk_log~get_messages( ).
   WRITE: / |Messages retrieved: { lines( lt_messages ) }|.
 
-  " save + GUI display
+  " save + show_by_handle
   TRY.
       DATA(lv_handle) = lo_log->zif_shk_log~save( ).
       WRITE: / |Log saved, handle: { lv_handle }|.
-
-      " show_by_handle
       zcl_shk_log_gui=>show_by_handle( lv_handle ).
-
     CATCH zcx_shk_log INTO DATA(lo_save_err).
       WRITE: / |Save error: { lo_save_err->get_text( ) }|.
   ENDTRY.
 
-  " show_by_messages (without save)
+  " show_by_messages (in-memory display without save)
   DATA(lo_log2) = NEW zcl_shk_log( ).
   lo_log2->zif_shk_log~add_free_text( 'Direct message display' ).
+  lo_log2->zif_shk_log~add_free_text( iv_text = 'Second message' iv_type = 'W' ).
   zcl_shk_log_gui=>show_by_messages(
     it_messages = lo_log2->zif_shk_log~get_messages( )
     iv_title    = 'Direct Display Demo' ).
+
+  " show_by_log (save + display in one call)
+  DATA(lo_log3) = NEW zcl_shk_log( iv_extnumber = 'SHOW_BY_LOG' ).
+  lo_log3->zif_shk_log~add_free_text( 'show_by_log demo' ).
+  lo_log3->zif_shk_log~add_free_text( iv_text = 'Combines save + display' iv_type = 'S' ).
+  TRY.
+      zcl_shk_log_gui=>show_by_log( lo_log3 ).
+    CATCH zcx_shk_log INTO DATA(lo_err3).
+      WRITE: / |show_by_log error: { lo_err3->get_text( ) }|.
+  ENDTRY.
 
   " clear
   lo_log2->zif_shk_log~clear( ).
