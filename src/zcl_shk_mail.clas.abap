@@ -24,6 +24,14 @@ CLASS zcl_shk_mail DEFINITION
     METHODS build_document
       RETURNING VALUE(ro_document) TYPE REF TO cl_document_bcs
       RAISING   zcx_shk_mail.
+
+    METHODS render_table_html
+      IMPORTING
+        it_table         TYPE ANY TABLE
+        it_columns       TYPE zif_shk_mail=>ty_t_column OPTIONAL
+        iv_title         TYPE clike OPTIONAL
+      RETURNING
+        VALUE(rv_html)   TYPE string.
 ENDCLASS.
 
 CLASS zcl_shk_mail IMPLEMENTATION.
@@ -41,6 +49,22 @@ CLASS zcl_shk_mail IMPLEMENTATION.
   METHOD zif_shk_mail~set_body_html.
     mv_body    = iv_html.
     mv_is_html = abap_true.
+    ro_self = me.
+  ENDMETHOD.
+
+  METHOD zif_shk_mail~add_table.
+    DATA(lv_table_html) = render_table_html(
+      it_table   = it_table
+      it_columns = it_columns
+      iv_title   = iv_title ).
+
+    IF mv_is_html = abap_true AND mv_body IS NOT INITIAL.
+      mv_body = mv_body && lv_table_html.
+    ELSE.
+      mv_body = lv_table_html.
+      mv_is_html = abap_true.
+    ENDIF.
+
     ro_self = me.
   ENDMETHOD.
 
@@ -158,5 +182,63 @@ CLASS zcl_shk_mail IMPLEMENTATION.
           EXPORTING iv_text  = lo_error->get_text( )
                     previous = lo_error.
     ENDTRY.
+  ENDMETHOD.
+
+  METHOD render_table_html.
+    FIELD-SYMBOLS <ls_row> TYPE any.
+    FIELD-SYMBOLS <lv_field> TYPE any.
+
+    DATA lo_table TYPE REF TO cl_abap_tabledescr.
+    lo_table ?= cl_abap_typedescr=>describe_by_data( it_table ).
+    DATA lo_struct TYPE REF TO cl_abap_structdescr.
+    lo_struct ?= lo_table->get_table_line_type( ).
+    DATA(lt_components) = lo_struct->get_components( ).
+
+    IF iv_title IS NOT INITIAL.
+      rv_html = |<h3>{ iv_title }</h3>|.
+    ENDIF.
+
+    rv_html = rv_html &&
+      |<table border="1" cellpadding="4" cellspacing="0" | &&
+      |style="border-collapse:collapse;font-family:Arial,sans-serif;font-size:12px">|.
+
+    rv_html = rv_html && '<tr style="background-color:#4472C4;color:#FFFFFF;font-weight:bold">'.
+    LOOP AT lt_components INTO DATA(ls_comp).
+      DATA lv_header TYPE string.
+      CLEAR lv_header.
+      IF it_columns IS NOT INITIAL.
+        READ TABLE it_columns INTO DATA(ls_col)
+          WITH KEY fieldname = ls_comp-name.
+        IF sy-subrc = 0.
+          lv_header = ls_col-title.
+        ENDIF.
+      ENDIF.
+      IF lv_header IS INITIAL.
+        lv_header = ls_comp-name.
+      ENDIF.
+      rv_html = rv_html && |<td>{ lv_header }</td>|.
+    ENDLOOP.
+    rv_html = rv_html && '</tr>'.
+
+    DATA lv_row_idx TYPE i.
+    LOOP AT it_table ASSIGNING <ls_row>.
+      lv_row_idx = sy-tabix MOD 2.
+      IF lv_row_idx = 0.
+        rv_html = rv_html && '<tr style="background-color:#D9E2F3">'.
+      ELSE.
+        rv_html = rv_html && '<tr>'.
+      ENDIF.
+      LOOP AT lt_components INTO ls_comp.
+        ASSIGN COMPONENT ls_comp-name OF STRUCTURE <ls_row> TO <lv_field>.
+        IF sy-subrc = 0.
+          rv_html = rv_html && |<td>{ <lv_field> }</td>|.
+        ELSE.
+          rv_html = rv_html && '<td></td>'.
+        ENDIF.
+      ENDLOOP.
+      rv_html = rv_html && '</tr>'.
+    ENDLOOP.
+
+    rv_html = rv_html && '</table><br>'.
   ENDMETHOD.
 ENDCLASS.
