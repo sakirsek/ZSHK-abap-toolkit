@@ -5,6 +5,8 @@ REPORT zshk_demo_mail.
 
 PARAMETERS p_to   TYPE ad_smtpadr.
 PARAMETERS p_cc   TYPE ad_smtpadr.
+PARAMETERS p_bcc  TYPE ad_smtpadr.
+PARAMETERS p_from TYPE ad_smtpadr.
 PARAMETERS p_subj TYPE so_obj_des DEFAULT 'ZSHK Mail Test'.
 PARAMETERS p_html TYPE abap_bool AS CHECKBOX DEFAULT 'X'.
 PARAMETERS p_att  TYPE abap_bool AS CHECKBOX DEFAULT 'X'.
@@ -36,14 +38,26 @@ START-OF-SELECTION.
     WRITE: / 'Body: Plain text'.
   ENDIF.
 
-  " add_recipient (TO)
+  " add_recipient — TO
   lo_mail->zif_shk_mail~add_recipient( p_to ).
   WRITE: / 'TO:', p_to.
 
-  " add_recipient (CC)
+  " add_recipient — CC
   IF p_cc IS NOT INITIAL.
     lo_mail->zif_shk_mail~add_recipient( iv_address = p_cc iv_copy = 'C' ).
     WRITE: / 'CC:', p_cc.
+  ENDIF.
+
+  " add_recipient — BCC
+  IF p_bcc IS NOT INITIAL.
+    lo_mail->zif_shk_mail~add_recipient( iv_address = p_bcc iv_copy = 'B' ).
+    WRITE: / 'BCC:', p_bcc.
+  ENDIF.
+
+  " set_sender
+  IF p_from IS NOT INITIAL.
+    lo_mail->zif_shk_mail~set_sender( p_from ).
+    WRITE: / 'From:', p_from.
   ENDIF.
 
   " set_importance
@@ -59,7 +73,20 @@ START-OF-SELECTION.
     lo_mail->zif_shk_mail~add_attachment_csv(
       iv_filename = 'test_data.csv'
       iv_csv      = lv_csv ).
-    WRITE: / 'Attachment: test_data.csv (CSV)'.
+    WRITE: / 'Attachment 1: test_data.csv (CSV)'.
+
+    " add_attachment — binary (xstring)
+    DATA lv_bin TYPE xstring.
+    DATA lo_conv TYPE REF TO cl_abap_conv_out_ce.
+    lo_conv = cl_abap_conv_out_ce=>create( encoding = '4110' ).
+    lo_conv->convert(
+      EXPORTING data = 'Binary attachment demo content'
+      IMPORTING buffer = lv_bin ).
+    lo_mail->zif_shk_mail~add_attachment(
+      iv_filename = 'demo_note.txt'
+      iv_content  = lv_bin
+      iv_mimetype = 'text/plain' ).
+    WRITE: / 'Attachment 2: demo_note.txt (binary)'.
   ENDIF.
 
   ULINE.
