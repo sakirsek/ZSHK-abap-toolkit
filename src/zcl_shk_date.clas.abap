@@ -65,19 +65,21 @@ ENDCLASS.
 
 CLASS zcl_shk_date IMPLEMENTATION.
   METHOD is_workday.
-    DATA lv_type TYPE scal-indicator.
-
-    CALL FUNCTION 'DAY_ATTRIBUTES_GET'
+    CALL FUNCTION 'DATE_CHECK_WORKINGDAY'
       EXPORTING
-        factory_calendar = iv_factory_cal_id
-        from             = iv_date
-        to               = iv_date
-      IMPORTING
-        day_attributes   = lv_type
+        date                       = iv_date
+        factory_calendar_id        = iv_factory_cal_id
+        message_type               = 'E'
       EXCEPTIONS
-        OTHERS           = 1.
+        date_after_range           = 1
+        date_before_range          = 2
+        date_invalid               = 3
+        date_no_workingday         = 4
+        factory_calendar_not_found = 5
+        message_type_invalid       = 6
+        OTHERS                     = 7.
 
-    rv_result = xsdbool( sy-subrc = 0 AND lv_type IS INITIAL ).
+    rv_result = xsdbool( sy-subrc = 0 ).
   ENDMETHOD.
 
   METHOD get_next_workday.
@@ -146,16 +148,21 @@ CLASS zcl_shk_date IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD get_workdays_between.
-    rv_count = 0.
+    DATA lt_dats TYPE STANDARD TABLE OF rke_dat.
 
     CALL FUNCTION 'RKE_SELECT_FACTDAYS_FOR_PERIOD'
       EXPORTING
-        i_datab        = iv_from
-        i_datbi        = iv_to
-        i_factoryid    = iv_factory_cal_id
-      IMPORTING
-        e_facdays      = rv_count
+        i_datab               = iv_from
+        i_datbi               = iv_to
+        i_factid              = iv_factory_cal_id
+      TABLES
+        eth_dats              = lt_dats
       EXCEPTIONS
-        OTHERS         = 1.
+        date_conversion_error = 1
+        OTHERS                = 2.
+
+    IF sy-subrc = 0.
+      rv_count = lines( lt_dats ).
+    ENDIF.
   ENDMETHOD.
 ENDCLASS.
