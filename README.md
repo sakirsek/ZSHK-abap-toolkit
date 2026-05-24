@@ -11,7 +11,7 @@ Personal, portable library — pull into any SAP system via [abapGit](https://ab
 | **Log** | `ZCL_SHK_LOG`, `ZCL_SHK_LOG_GUI` | Application log wrapper (BAL) — add messages in any format, save, display | Done |
 | **BDC** | `ZCL_SHK_BDC` | Batch Data Communication wrapper — screen/field builder, BAPIRET2 errors | Done |
 | **Mail** | `ZCL_SHK_MAIL` | Email via CL_BCS — HTML body, attachments (PDF/Excel/CSV), CC/BCC | Done |
-| **FTP** | `ZCL_SHK_FTP` | FTP upload/download, directory listing, error handling | Done |
+| **FTP** | `ZCL_SHK_FTP` | FTP client — upload/download, cd, passive, rename, file_exists, raw command | Done |
 | **HTTP** | `ZCL_SHK_HTTP` | REST client — GET/POST/PUT/DELETE, JSON, timeout, Turkish charset | Done |
 | **Job** | `ZCL_SHK_JOB` | Background job scheduler — open/submit/close, singleton lock check | Done |
 | **Date** | `ZCL_SHK_DATE` | Factory calendar utilities — workday checks, add/subtract workdays, period | Done |
@@ -54,7 +54,11 @@ lo_mail->zif_shk_mail~set_subject( 'Report' )->set_body_html( lv_html )->add_rec
 ```abap
 DATA(lo_ftp) = NEW zcl_shk_ftp( iv_host = '10.0.0.1' iv_user = 'ftpuser' iv_password = 'pass' ).
 lo_ftp->zif_shk_ftp~connect( ).
-lo_ftp->zif_shk_ftp~upload( iv_remote_path = '/data/export.csv' iv_content = lv_xstring ).
+lo_ftp->zif_shk_ftp~set_passive( abap_true ).
+lo_ftp->zif_shk_ftp~cd( 'incoming' ).
+lo_ftp->zif_shk_ftp~upload( iv_remote_path = 'export.csv' iv_content = lv_xstring iv_overwrite = abap_false ).
+DATA(lt_lines) = lo_ftp->zif_shk_ftp~download_text( 'data.txt' ).
+lo_ftp->zif_shk_ftp~rename_file( iv_from = 'data.txt' iv_to = 'Archive/data.txt' ).
 lo_ftp->zif_shk_ftp~disconnect( ).
 ```
 
