@@ -7,7 +7,14 @@ INTERFACE zif_shk_mail PUBLIC.
       mimetype TYPE string,
     END OF ty_s_attachment,
 
-    ty_t_attachment TYPE STANDARD TABLE OF ty_s_attachment WITH EMPTY KEY.
+    ty_t_attachment TYPE STANDARD TABLE OF ty_s_attachment WITH EMPTY KEY,
+
+    BEGIN OF ty_s_column,
+      fieldname TYPE fieldname,
+      title     TYPE lvc_fname,
+    END OF ty_s_column,
+
+    ty_t_column TYPE STANDARD TABLE OF ty_s_column WITH EMPTY KEY.
 
   METHODS set_subject
     IMPORTING
@@ -24,6 +31,14 @@ INTERFACE zif_shk_mail PUBLIC.
   METHODS set_body_html
     IMPORTING
       iv_html TYPE clike
+    RETURNING
+      VALUE(ro_self) TYPE REF TO zif_shk_mail.
+
+  METHODS add_table
+    IMPORTING
+      it_table   TYPE ANY TABLE
+      it_columns TYPE ty_t_column OPTIONAL
+      iv_title   TYPE clike OPTIONAL
     RETURNING
       VALUE(ro_self) TYPE REF TO zif_shk_mail.
 
