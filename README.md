@@ -117,6 +117,24 @@ zcl_shk_csv=>csv_to_table( EXPORTING iv_csv = lv_csv CHANGING ct_table = lt_resu
 DATA(lv_pdf) = zcl_shk_pdf=>from_otf( lt_otf_data ).
 ```
 
+## Demo Programs
+
+Each module has a runnable demo program (`SE38`):
+
+| Program | Module | Notes |
+|---|---|---|
+| `ZSHK_DEMO_LOG` | Log | Standalone — creates and displays a sample log |
+| `ZSHK_DEMO_BDC` | BDC | Opens SE16 via BDC — check "Execute" to run |
+| `ZSHK_DEMO_MAIL` | Mail | Requires recipient — check "Send" to deliver |
+| `ZSHK_DEMO_FTP` | FTP | Requires host/user/password |
+| `ZSHK_DEMO_HTTP` | HTTP | Sends GET to httpbin.org by default |
+| `ZSHK_DEMO_JOB` | Job | Schedules a background job — check "Submit" to run |
+| `ZSHK_DEMO_DATE` | Date | Standalone — factory calendar calculations |
+| `ZSHK_DEMO_PROGRESS` | Progress | Standalone — shows progress bar with ETA |
+| `ZSHK_DEMO_RETURN` | Return | Standalone — BAPIRET2 factory and utilities |
+| `ZSHK_DEMO_CSV` | CSV | Standalone — table/CSV round-trip conversion |
+| `ZSHK_DEMO_PDF` | PDF | Requires a Smartform name (default: SF_EXAMPLE_01) |
+
 ## Installation
 
 1. Create package `ZSHK` in your SAP system (SE80 / SE21)
