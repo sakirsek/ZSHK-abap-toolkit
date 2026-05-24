@@ -10,7 +10,15 @@ PARAMETERS p_from TYPE ad_smtpadr.
 PARAMETERS p_subj TYPE so_obj_des DEFAULT 'ZSHK Mail Test'.
 PARAMETERS p_html TYPE abap_bool AS CHECKBOX DEFAULT 'X'.
 PARAMETERS p_att  TYPE abap_bool AS CHECKBOX DEFAULT 'X'.
+PARAMETERS p_tabl TYPE abap_bool AS CHECKBOX DEFAULT 'X'.
 PARAMETERS p_send TYPE abap_bool AS CHECKBOX.
+
+TYPES:
+  BEGIN OF ty_demo_row,
+    matnr TYPE matnr,
+    maktx TYPE maktx,
+    meins TYPE meins,
+  END OF ty_demo_row.
 
 START-OF-SELECTION.
 
@@ -24,18 +32,38 @@ START-OF-SELECTION.
     DATA(lv_html) = |<html><body>| &&
       |<h2>ZSHK Mail Demo</h2>| &&
       |<p>Bu mail <b>ZCL_SHK_MAIL</b> ile gonderildi.</p>| &&
-      |<table border="1" cellpadding="4">| &&
-      |<tr><th>Modul</th><th>Durum</th></tr>| &&
-      |<tr><td>Log</td><td>Tamamlandi</td></tr>| &&
-      |<tr><td>Mail</td><td>Test ediliyor</td></tr>| &&
-      |</table>| &&
-      |<p>Tarih: { sy-datum DATE = USER } Saat: { sy-uzeit TIME = USER }</p>| &&
-      |</body></html>|.
+      |<p>Tarih: { sy-datum DATE = USER } Saat: { sy-uzeit TIME = USER }</p>|.
     lo_mail->zif_shk_mail~set_body_html( lv_html ).
     WRITE: / 'Body: HTML'.
   ELSE.
     lo_mail->zif_shk_mail~set_body_text( 'Bu bir ZSHK Mail test mesajidir.' ).
     WRITE: / 'Body: Plain text'.
+  ENDIF.
+
+  " add_table — internal table to HTML table
+  IF p_tabl = abap_true.
+    DATA lt_demo TYPE STANDARD TABLE OF ty_demo_row.
+    lt_demo = VALUE #(
+      ( matnr = 'MAT001' maktx = 'Kablo 2.5mm' meins = 'MT' )
+      ( matnr = 'MAT002' maktx = 'Terminal Tip A' meins = 'AD' )
+      ( matnr = 'MAT003' maktx = 'Conta 10x15' meins = 'AD' ) ).
+
+    " with custom column titles
+    DATA lt_cols TYPE zif_shk_mail=>ty_t_column.
+    lt_cols = VALUE #(
+      ( fieldname = 'MATNR' title = 'Malzeme No' )
+      ( fieldname = 'MAKTX' title = 'Tanim' )
+      ( fieldname = 'MEINS' title = 'Birim' ) ).
+
+    lo_mail->zif_shk_mail~add_table(
+      it_table   = lt_demo
+      it_columns = lt_cols
+      iv_title   = 'Malzeme Listesi' ).
+    WRITE: / 'Table: 3 rows with custom column titles'.
+
+    " second table without custom columns (uses field names as headers)
+    lo_mail->zif_shk_mail~add_table( it_table = lt_demo ).
+    WRITE: / 'Table: 3 rows with default field name headers'.
   ENDIF.
 
   " add_recipient — TO
