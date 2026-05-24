@@ -147,17 +147,23 @@ CLASS zcl_shk_job IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD zif_shk_job~is_running.
+    DATA ls_sel TYPE btcselect.
     DATA lt_joblist TYPE STANDARD TABLE OF tbtcjob.
+
+    ls_sel-jobname  = iv_name.
+    ls_sel-username = '*'.
+    ls_sel-running  = abap_true.
+    ls_sel-from_date = sy-datum - 1.
+    ls_sel-to_date   = sy-datum.
 
     CALL FUNCTION 'BP_JOB_SELECT'
       EXPORTING
-        jobname         = iv_name
-        username        = '*'
-        jobstatus       = 'R'
+        jobselect_dialog  = 'N'
+        jobsel_param_in   = ls_sel
       TABLES
         jobselect_joblist = lt_joblist
       EXCEPTIONS
-        OTHERS          = 1.
+        OTHERS            = 1.
 
     rv_running = xsdbool( lt_joblist IS NOT INITIAL ).
   ENDMETHOD.
