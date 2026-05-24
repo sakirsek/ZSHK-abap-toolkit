@@ -9,6 +9,7 @@ PARAMETERS p_pwd  TYPE text50.
 PARAMETERS p_port TYPE i DEFAULT 21.
 PARAMETERS p_dir  TYPE text255 DEFAULT '.'.
 PARAMETERS p_upl  TYPE abap_bool AS CHECKBOX.
+PARAMETERS p_del  TYPE abap_bool AS CHECKBOX.
 PARAMETERS p_down TYPE text255.
 
 START-OF-SELECTION.
@@ -22,38 +23,61 @@ START-OF-SELECTION.
   TRY.
       " connect
       lo_ftp->zif_shk_ftp~connect( ).
-      WRITE: / |Connected to { p_host }:{ p_port }|.
+      WRITE: / 'Connected to:', p_host.
 
       " is_connected
       DATA(lv_conn) = lo_ftp->zif_shk_ftp~is_connected( ).
-      WRITE: / |Connected: { lv_conn }|.
+      WRITE: / 'is_connected:', lv_conn.
       ULINE.
 
       " list_directory
-      WRITE: / |Directory listing: { p_dir }|.
+      WRITE: / 'Directory listing:', p_dir.
       DATA(lt_files) = lo_ftp->zif_shk_ftp~list_directory( p_dir ).
       LOOP AT lt_files INTO DATA(ls_file).
-        WRITE: / |  { ls_file-name }|.
+        WRITE: / '  ', ls_file-name.
       ENDLOOP.
-      WRITE: / |Total: { lines( lt_files ) } entries|.
+      WRITE: / 'Total:', lines( lt_files ), 'entries'.
       ULINE.
 
-      " upload_text
       IF p_upl = abap_true.
+        " upload_text
         DATA(lv_text) = |ZSHK FTP Demo - { sy-datum } { sy-uzeit }| &&
           cl_abap_char_utilities=>cr_lf &&
           |User: { sy-uname }|.
         lo_ftp->zif_shk_ftp~upload_text(
-          iv_remote_path = '/zshk_demo_test.txt'
-          iv_text        = lv_text ).
-        WRITE: / 'Uploaded: /zshk_demo_test.txt'.
+          iv_remote_path = '/zshk_demo_text.txt'
+          iv_text        = lv_text
+          iv_encoding    = '4110' ).
+        WRITE: / 'upload_text: /zshk_demo_text.txt'.
+
+        " upload (binary xstring)
+        DATA lv_bin TYPE xstring.
+        DATA lo_conv TYPE REF TO cl_abap_conv_out_ce.
+        lo_conv = cl_abap_conv_out_ce=>create( encoding = '4110' ).
+        lo_conv->convert(
+          EXPORTING data = 'Binary upload demo content'
+          IMPORTING buffer = lv_bin ).
+        lo_ftp->zif_shk_ftp~upload(
+          iv_remote_path = '/zshk_demo_bin.dat'
+          iv_content     = lv_bin ).
+        WRITE: / 'upload (binary): /zshk_demo_bin.dat'.
       ENDIF.
 
       " download
       IF p_down IS NOT INITIAL.
         DATA(lv_content) = lo_ftp->zif_shk_ftp~download( p_down ).
-        WRITE: / |Downloaded: { p_down } ({ xstrlen( lv_content ) } bytes)|.
+        DATA lv_size TYPE i.
+        lv_size = xstrlen( lv_content ).
+        WRITE: / 'Downloaded:', p_down, lv_size, 'bytes'.
       ENDIF.
+
+      " delete_file
+      IF p_del = abap_true AND p_upl = abap_true.
+        lo_ftp->zif_shk_ftp~delete_file( '/zshk_demo_bin.dat' ).
+        WRITE: / 'delete_file: /zshk_demo_bin.dat'.
+      ENDIF.
+
+      ULINE.
 
       " disconnect
       lo_ftp->zif_shk_ftp~disconnect( ).
