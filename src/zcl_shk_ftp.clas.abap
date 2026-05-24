@@ -20,6 +20,14 @@ CLASS zcl_shk_ftp DEFINITION
     DATA mv_port      TYPE i.
     DATA mv_handle    TYPE i.
     DATA mv_connected TYPE abap_bool.
+
+    METHODS run_command
+      IMPORTING
+        iv_command       TYPE clike
+      RETURNING
+        VALUE(rt_result) TYPE string_table
+      RAISING
+        zcx_shk_ftp.
 ENDCLASS.
 
 CLASS zcl_shk_ftp IMPLEMENTATION.
@@ -29,6 +37,40 @@ CLASS zcl_shk_ftp IMPLEMENTATION.
     mv_password  = iv_password.
     mv_port      = iv_port.
     mv_connected = abap_false.
+  ENDMETHOD.
+
+  METHOD run_command.
+    IF mv_connected = abap_false.
+      RAISE EXCEPTION TYPE zcx_shk_ftp
+        EXPORTING iv_text = 'Not connected'.
+    ENDIF.
+
+    TYPES ty_line(1024) TYPE c.
+    DATA lt_raw TYPE STANDARD TABLE OF ty_line.
+
+    CALL FUNCTION 'FTP_COMMAND'
+      EXPORTING
+        handle        = mv_handle
+        command       = CONV char200( iv_command )
+      TABLES
+        data          = lt_raw
+      EXCEPTIONS
+        tcpip_error   = 1
+        command_error = 2
+        data_error    = 3
+        OTHERS        = 4.
+
+    IF sy-subrc <> 0.
+      RAISE EXCEPTION TYPE zcx_shk_ftp
+        EXPORTING iv_text = |FTP command failed: { iv_command }|.
+    ENDIF.
+
+    LOOP AT lt_raw INTO DATA(lv_line).
+      DATA(lv_str) = condense( CONV string( lv_line ) ).
+      IF lv_str IS NOT INITIAL.
+        APPEND lv_str TO rt_result.
+      ENDIF.
+    ENDLOOP.
   ENDMETHOD.
 
   METHOD zif_shk_ftp~connect.
@@ -80,10 +122,30 @@ CLASS zcl_shk_ftp IMPLEMENTATION.
     mv_connected = abap_false.
   ENDMETHOD.
 
+  METHOD zif_shk_ftp~cd.
+    run_command( |cd { iv_directory }| ).
+  ENDMETHOD.
+
+  METHOD zif_shk_ftp~set_passive.
+    IF iv_on = abap_true.
+      run_command( 'set passive on' ).
+    ELSE.
+      run_command( 'set passive off' ).
+    ENDIF.
+  ENDMETHOD.
+
+  METHOD zif_shk_ftp~rename_file.
+    run_command( |rename { iv_from } { iv_to }| ).
+  ENDMETHOD.
+
+  METHOD zif_shk_ftp~command.
+    rt_result = run_command( iv_command ).
+  ENDMETHOD.
+
   METHOD zif_shk_ftp~upload.
     IF mv_connected = abap_false.
       RAISE EXCEPTION TYPE zcx_shk_ftp
-        EXPORTING iv_text = 'Not connected — call connect( ) first'.
+        EXPORTING iv_text = 'Not connected'.
     ENDIF.
 
     IF iv_overwrite = abap_false.
@@ -118,7 +180,7 @@ CLASS zcl_shk_ftp IMPLEMENTATION.
 
     IF sy-subrc <> 0.
       RAISE EXCEPTION TYPE zcx_shk_ftp
-        EXPORTING iv_text = |FTP upload failed for { iv_remote_path }: { sy-msgv1 }|.
+        EXPORTING iv_text = |FTP upload failed: { iv_remote_path }|.
     ENDIF.
   ENDMETHOD.
 
@@ -136,7 +198,7 @@ CLASS zcl_shk_ftp IMPLEMENTATION.
   METHOD zif_shk_ftp~download.
     IF mv_connected = abap_false.
       RAISE EXCEPTION TYPE zcx_shk_ftp
-        EXPORTING iv_text = 'Not connected — call connect( ) first'.
+        EXPORTING iv_text = 'Not connected'.
     ENDIF.
 
     DATA lt_data TYPE STANDARD TABLE OF raw255.
@@ -158,7 +220,7 @@ CLASS zcl_shk_ftp IMPLEMENTATION.
 
     IF sy-subrc <> 0.
       RAISE EXCEPTION TYPE zcx_shk_ftp
-        EXPORTING iv_text = |FTP download failed for { iv_remote_path }: { sy-msgv1 }|.
+        EXPORTING iv_text = |FTP download failed: { iv_remote_path }|.
     ENDIF.
 
     CALL FUNCTION 'SCMS_BINARY_TO_XSTRING'
@@ -173,71 +235,38 @@ CLASS zcl_shk_ftp IMPLEMENTATION.
         OTHERS       = 2.
   ENDMETHOD.
 
+  METHOD zif_shk_ftp~download_text.
+    DATA(lv_xstring) = zif_shk_ftp~download( iv_remote_path ).
+
+    DATA lv_text TYPE string.
+    DATA lo_conv TYPE REF TO cl_abap_conv_in_ce.
+    lo_conv = cl_abap_conv_in_ce=>create( encoding = iv_encoding input = lv_xstring ).
+    lo_conv->read( IMPORTING data = lv_text ).
+
+    SPLIT lv_text AT cl_abap_char_utilities=>cr_lf INTO TABLE rt_lines.
+    IF lines( rt_lines ) <= 1.
+      SPLIT lv_text AT cl_abap_char_utilities=>newline INTO TABLE rt_lines.
+    ENDIF.
+
+    DELETE rt_lines WHERE table_line IS INITIAL.
+  ENDMETHOD.
+
   METHOD zif_shk_ftp~list_directory.
-    IF mv_connected = abap_false.
-      RAISE EXCEPTION TYPE zcx_shk_ftp
-        EXPORTING iv_text = 'Not connected — call connect( ) first'.
-    ENDIF.
+    DATA(lt_raw) = run_command( |ls { iv_directory }| ).
 
-    TYPES ty_line(1024) TYPE c.
-    DATA lt_result TYPE STANDARD TABLE OF ty_line.
-
-    CALL FUNCTION 'FTP_COMMAND'
-      EXPORTING
-        handle        = mv_handle
-        command       = CONV char200( |ls { iv_directory }| )
-      TABLES
-        data          = lt_result
-      EXCEPTIONS
-        tcpip_error   = 1
-        command_error = 2
-        data_error    = 3
-        OTHERS        = 4.
-
-    IF sy-subrc <> 0.
-      RAISE EXCEPTION TYPE zcx_shk_ftp
-        EXPORTING iv_text = |FTP list failed for { iv_directory }: { sy-msgv1 }|.
-    ENDIF.
-
-    LOOP AT lt_result INTO DATA(lv_line).
-      DATA(lv_trimmed) = condense( CONV string( lv_line ) ).
-      IF lv_trimmed IS NOT INITIAL.
-        APPEND VALUE zif_shk_ftp=>ty_s_file( name = lv_trimmed ) TO rt_files.
-      ENDIF.
+    LOOP AT lt_raw INTO DATA(lv_line).
+      APPEND VALUE zif_shk_ftp=>ty_s_file( name = lv_line ) TO rt_files.
     ENDLOOP.
   ENDMETHOD.
 
   METHOD zif_shk_ftp~delete_file.
-    IF mv_connected = abap_false.
-      RAISE EXCEPTION TYPE zcx_shk_ftp
-        EXPORTING iv_text = 'Not connected — call connect( ) first'.
-    ENDIF.
-
-    TYPES ty_line(1024) TYPE c.
-    DATA lt_result TYPE STANDARD TABLE OF ty_line.
-
-    CALL FUNCTION 'FTP_COMMAND'
-      EXPORTING
-        handle        = mv_handle
-        command       = CONV char200( |delete { iv_remote_path }| )
-      TABLES
-        data          = lt_result
-      EXCEPTIONS
-        tcpip_error   = 1
-        command_error = 2
-        data_error    = 3
-        OTHERS        = 4.
-
-    IF sy-subrc <> 0.
-      RAISE EXCEPTION TYPE zcx_shk_ftp
-        EXPORTING iv_text = |FTP delete failed for { iv_remote_path }: { sy-msgv1 }|.
-    ENDIF.
+    run_command( |delete { iv_remote_path }| ).
   ENDMETHOD.
 
   METHOD zif_shk_ftp~file_exists.
     IF mv_connected = abap_false.
       RAISE EXCEPTION TYPE zcx_shk_ftp
-        EXPORTING iv_text = 'Not connected — call connect( ) first'.
+        EXPORTING iv_text = 'Not connected'.
     ENDIF.
 
     TYPES ty_line(1024) TYPE c.

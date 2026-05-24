@@ -14,6 +14,18 @@ INTERFACE zif_shk_ftp PUBLIC.
 
   METHODS disconnect.
 
+  METHODS cd
+    IMPORTING
+      iv_directory TYPE clike
+    RAISING
+      zcx_shk_ftp.
+
+  METHODS set_passive
+    IMPORTING
+      iv_on TYPE abap_bool DEFAULT abap_true
+    RAISING
+      zcx_shk_ftp.
+
   METHODS upload
     IMPORTING
       iv_remote_path TYPE clike
@@ -39,6 +51,15 @@ INTERFACE zif_shk_ftp PUBLIC.
     RAISING
       zcx_shk_ftp.
 
+  METHODS download_text
+    IMPORTING
+      iv_remote_path   TYPE clike
+      iv_encoding      TYPE abap_encoding DEFAULT '4110'
+    RETURNING
+      VALUE(rt_lines)  TYPE string_table
+    RAISING
+      zcx_shk_ftp.
+
   METHODS list_directory
     IMPORTING
       iv_directory   TYPE clike DEFAULT '.'
@@ -53,11 +74,26 @@ INTERFACE zif_shk_ftp PUBLIC.
     RAISING
       zcx_shk_ftp.
 
+  METHODS rename_file
+    IMPORTING
+      iv_from TYPE clike
+      iv_to   TYPE clike
+    RAISING
+      zcx_shk_ftp.
+
   METHODS file_exists
     IMPORTING
       iv_remote_path    TYPE clike
     RETURNING
       VALUE(rv_exists)  TYPE abap_bool
+    RAISING
+      zcx_shk_ftp.
+
+  METHODS command
+    IMPORTING
+      iv_command       TYPE clike
+    RETURNING
+      VALUE(rt_result) TYPE string_table
     RAISING
       zcx_shk_ftp.
 
