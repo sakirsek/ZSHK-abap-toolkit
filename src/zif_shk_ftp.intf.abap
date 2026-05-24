@@ -18,6 +18,7 @@ INTERFACE zif_shk_ftp PUBLIC.
     IMPORTING
       iv_remote_path TYPE clike
       iv_content     TYPE xstring
+      iv_overwrite   TYPE abap_bool DEFAULT abap_true
     RAISING
       zcx_shk_ftp.
 
@@ -26,6 +27,7 @@ INTERFACE zif_shk_ftp PUBLIC.
       iv_remote_path TYPE clike
       iv_text        TYPE string
       iv_encoding    TYPE abap_encoding DEFAULT '4110'
+      iv_overwrite   TYPE abap_bool DEFAULT abap_true
     RAISING
       zcx_shk_ftp.
 
@@ -48,6 +50,14 @@ INTERFACE zif_shk_ftp PUBLIC.
   METHODS delete_file
     IMPORTING
       iv_remote_path TYPE clike
+    RAISING
+      zcx_shk_ftp.
+
+  METHODS file_exists
+    IMPORTING
+      iv_remote_path    TYPE clike
+    RETURNING
+      VALUE(rv_exists)  TYPE abap_bool
     RAISING
       zcx_shk_ftp.
 

@@ -9,6 +9,7 @@ PARAMETERS p_pwd  TYPE text50.
 PARAMETERS p_port TYPE i DEFAULT 21.
 PARAMETERS p_dir  TYPE text255 DEFAULT '.'.
 PARAMETERS p_upl  TYPE abap_bool AS CHECKBOX.
+PARAMETERS p_noov TYPE abap_bool AS CHECKBOX.
 PARAMETERS p_del  TYPE abap_bool AS CHECKBOX.
 PARAMETERS p_down TYPE text255.
 
@@ -39,18 +40,32 @@ START-OF-SELECTION.
       WRITE: / 'Total:', lines( lt_files ), 'entries'.
       ULINE.
 
+      " file_exists
+      DATA(lv_chk) = '/zshk_demo_text.txt'.
+      DATA(lv_exists) = lo_ftp->zif_shk_ftp~file_exists( lv_chk ).
+      WRITE: / 'file_exists:', lv_chk, lv_exists.
+      ULINE.
+
       IF p_upl = abap_true.
-        " upload_text
+        DATA lv_overwrite TYPE abap_bool.
+        IF p_noov = abap_true.
+          lv_overwrite = abap_false.
+        ELSE.
+          lv_overwrite = abap_true.
+        ENDIF.
+
+        " upload_text (with overwrite control)
         DATA(lv_text) = |ZSHK FTP Demo - { sy-datum } { sy-uzeit }| &&
           cl_abap_char_utilities=>cr_lf &&
           |User: { sy-uname }|.
         lo_ftp->zif_shk_ftp~upload_text(
           iv_remote_path = '/zshk_demo_text.txt'
           iv_text        = lv_text
-          iv_encoding    = '4110' ).
+          iv_encoding    = '4110'
+          iv_overwrite   = lv_overwrite ).
         WRITE: / 'upload_text: /zshk_demo_text.txt'.
 
-        " upload (binary xstring)
+        " upload binary (with overwrite control)
         DATA lv_bin TYPE xstring.
         DATA lo_conv TYPE REF TO cl_abap_conv_out_ce.
         lo_conv = cl_abap_conv_out_ce=>create( encoding = '4110' ).
@@ -59,7 +74,8 @@ START-OF-SELECTION.
           IMPORTING buffer = lv_bin ).
         lo_ftp->zif_shk_ftp~upload(
           iv_remote_path = '/zshk_demo_bin.dat'
-          iv_content     = lv_bin ).
+          iv_content     = lv_bin
+          iv_overwrite   = lv_overwrite ).
         WRITE: / 'upload (binary): /zshk_demo_bin.dat'.
       ENDIF.
 
