@@ -13,6 +13,12 @@ Personal, portable library — pull into any SAP system via [abapGit](https://ab
 | **Mail** | `ZCL_SHK_MAIL` | Email via CL_BCS — HTML body, attachments (PDF/Excel/CSV), CC/BCC | Done |
 | **FTP** | `ZCL_SHK_FTP` | FTP upload/download, directory listing, error handling | Done |
 | **HTTP** | `ZCL_SHK_HTTP` | REST client — GET/POST/PUT/DELETE, JSON, timeout, Turkish charset | Done |
+| **Job** | `ZCL_SHK_JOB` | Background job scheduler — open/submit/close, singleton lock check | Done |
+| **Date** | `ZCL_SHK_DATE` | Factory calendar utilities — workday checks, add/subtract workdays, period | Done |
+| **Progress** | `ZCL_SHK_PROGRESS` | Progress indicator with ETA estimation | Done |
+| **Return** | `ZCL_SHK_RETURN` | BAPIRET2 factory — create from text/sy-msg/exception, collect errors | Done |
+| **CSV** | `ZCL_SHK_CSV` | Internal table to CSV and back, Turkish charset support | Done |
+| **PDF** | `ZCL_SHK_PDF` | Smartform OTF to binary PDF conversion | Done |
 
 ## Usage
 
@@ -59,6 +65,56 @@ lo_ftp->zif_shk_ftp~disconnect( ).
 DATA(lo_http) = NEW zcl_shk_http( iv_url = 'https://api.example.com' ).
 lo_http->zif_shk_http~set_basic_auth( iv_user = 'user' iv_password = 'pass' ).
 DATA(ls_resp) = lo_http->zif_shk_http~post( iv_path = '/orders' iv_body = lv_json ).
+```
+
+### Job
+
+```abap
+DATA(lo_job) = NEW zcl_shk_job( ).
+lo_job->zif_shk_job~set_name( 'ZREPORT_DAILY' )->add_step( iv_program = 'ZREPORT' iv_variant = 'V01' )->schedule_immediate( )->submit( ).
+```
+
+### Date
+
+```abap
+IF zcl_shk_date=>is_workday( ) = abap_true.
+  DATA(lv_next) = zcl_shk_date=>add_workdays( iv_days = 5 ).
+  DATA(lv_last_day) = zcl_shk_date=>get_month_last( ).
+ENDIF.
+```
+
+### Progress
+
+```abap
+DATA(lo_prog) = NEW zcl_shk_progress( iv_total = lines( lt_data ) iv_text = 'Exporting' ).
+LOOP AT lt_data INTO DATA(ls_data).
+  lo_prog->increment( ).
+  " ... process
+ENDLOOP.
+```
+
+### Return
+
+```abap
+DATA(ls_err) = zcl_shk_return=>error( 'Material not found' ).
+DATA(ls_ok)  = zcl_shk_return=>success( 'Saved' ).
+DATA(ls_sy)  = zcl_shk_return=>from_sy_msg( ).
+IF zcl_shk_return=>has_errors( lt_return ) = abap_true.
+  DATA(lt_errs) = zcl_shk_return=>collect_errors( lt_return ).
+ENDIF.
+```
+
+### CSV
+
+```abap
+DATA(lv_csv) = zcl_shk_csv=>table_to_csv( it_table = lt_data iv_separator = ';' ).
+zcl_shk_csv=>csv_to_table( EXPORTING iv_csv = lv_csv CHANGING ct_table = lt_result ).
+```
+
+### PDF
+
+```abap
+DATA(lv_pdf) = zcl_shk_pdf=>from_otf( lt_otf_data ).
 ```
 
 ## Installation
