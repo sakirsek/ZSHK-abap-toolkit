@@ -31,7 +31,7 @@ CLASS zcl_shk_log_gui IMPLEMENTATION.
     APPEND iv_log_handle TO lt_handles.
 
     DATA ls_profile TYPE bal_s_prof.
-    CALL FUNCTION 'BAL_DSP_PROFILE_SINGLE_LOG_GET'
+    CALL FUNCTION 'BAL_DSP_PROFILE_POPUP_GET'
       IMPORTING
         e_s_display_profile = ls_profile
       EXCEPTIONS
@@ -39,7 +39,7 @@ CLASS zcl_shk_log_gui IMPLEMENTATION.
 
     IF sy-subrc <> 0.
       RAISE EXCEPTION TYPE zcx_shk_log
-        EXPORTING iv_text = 'BAL_DSP_PROFILE_SINGLE_LOG_GET failed'.
+        EXPORTING iv_text = 'BAL_DSP_PROFILE_POPUP_GET failed'.
     ENDIF.
 
     ls_profile-use_grid = abap_true.
@@ -62,23 +62,9 @@ CLASS zcl_shk_log_gui IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD show_by_messages.
-    DATA lt_msg TYPE TABLE OF bal_s_msg.
     DATA ls_msg TYPE bal_s_msg.
 
-    LOOP AT it_messages INTO DATA(ls_in).
-      CLEAR ls_msg.
-      ls_msg-msgty = ls_in-type.
-      ls_msg-msgid = ls_in-id.
-      ls_msg-msgno = ls_in-number.
-      ls_msg-msgv1 = ls_in-v1.
-      ls_msg-msgv2 = ls_in-v2.
-      ls_msg-msgv3 = ls_in-v3.
-      ls_msg-msgv4 = ls_in-v4.
-      APPEND ls_msg TO lt_msg.
-    ENDLOOP.
-
     DATA ls_header TYPE bal_s_log.
-    ls_header-object    = 'APPL_LOG'.
     ls_header-extnumber = iv_title.
     ls_header-aldate    = sy-datum.
     ls_header-altime    = sy-uzeit.
@@ -98,7 +84,16 @@ CLASS zcl_shk_log_gui IMPLEMENTATION.
       RETURN.
     ENDIF.
 
-    LOOP AT lt_msg INTO ls_msg.
+    LOOP AT it_messages INTO DATA(ls_in).
+      CLEAR ls_msg.
+      ls_msg-msgty = ls_in-type.
+      ls_msg-msgid = ls_in-id.
+      ls_msg-msgno = ls_in-number.
+      ls_msg-msgv1 = ls_in-v1.
+      ls_msg-msgv2 = ls_in-v2.
+      ls_msg-msgv3 = ls_in-v3.
+      ls_msg-msgv4 = ls_in-v4.
+
       CALL FUNCTION 'BAL_LOG_MSG_ADD'
         EXPORTING
           i_log_handle = lv_handle
@@ -111,7 +106,7 @@ CLASS zcl_shk_log_gui IMPLEMENTATION.
     APPEND lv_handle TO lt_handles.
 
     DATA ls_profile TYPE bal_s_prof.
-    CALL FUNCTION 'BAL_DSP_PROFILE_SINGLE_LOG_GET'
+    CALL FUNCTION 'BAL_DSP_PROFILE_POPUP_GET'
       IMPORTING
         e_s_display_profile = ls_profile
       EXCEPTIONS
