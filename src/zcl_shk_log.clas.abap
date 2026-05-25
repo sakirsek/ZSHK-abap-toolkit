@@ -7,9 +7,9 @@ CLASS zcl_shk_log DEFINITION
 
     METHODS constructor
       IMPORTING
-        iv_object    TYPE balobj_d DEFAULT 'APPL_LOG'
-        iv_subobject TYPE balsubobj  DEFAULT space
-        iv_extnumber TYPE balnrext   OPTIONAL.
+        iv_object    TYPE balobj_d  OPTIONAL
+        iv_subobject TYPE balsubobj OPTIONAL
+        iv_extnumber TYPE balnrext  OPTIONAL.
 
   PROTECTED SECTION.
   PRIVATE SECTION.
@@ -162,6 +162,12 @@ CLASS zcl_shk_log IMPLEMENTATION.
       ENDIF.
     ENDLOOP.
 
+    rv_log_handle = mv_log_handle.
+
+    IF mv_object IS INITIAL.
+      RETURN.
+    ENDIF.
+
     DATA lt_handles TYPE bal_t_logh.
     APPEND mv_log_handle TO lt_handles.
 
@@ -178,8 +184,6 @@ CLASS zcl_shk_log IMPLEMENTATION.
       RAISE EXCEPTION TYPE zcx_shk_log
         EXPORTING iv_text = |BAL_DB_SAVE failed: { sy-msgv1 }|.
     ENDIF.
-
-    rv_log_handle = mv_log_handle.
   ENDMETHOD.
 
   METHOD zif_shk_log~get_messages.
