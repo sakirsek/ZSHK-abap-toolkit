@@ -8,7 +8,7 @@ Personal, portable library — pull into any SAP system via [abapGit](https://ab
 
 | Module | Class | Description | Status |
 |---|---|---|---|
-| **Log** | `ZCL_SHK_LOG`, `ZCL_SHK_LOG_GUI` | Application log wrapper (BAL) — add messages in any format, save, display | Done |
+| **Log** | `ZCL_SHK_LOG`, `ZCL_SHK_LOG_GUI` | Application log — in-memory popup (zero config) or persistent SLG1 (with SLG0 object) | Done |
 | **BDC** | `ZCL_SHK_BDC` | Batch Data Communication wrapper — screen/field builder, BAPIRET2 errors | Done |
 | **Mail** | `ZCL_SHK_MAIL` | Email via CL_BCS — HTML body, attachments (PDF/Excel/CSV), CC/BCC | Done |
 | **FTP** | `ZCL_SHK_FTP` | FTP client — upload/download, cd, passive, rename, file_exists, raw command | Done |
@@ -24,11 +24,16 @@ Personal, portable library — pull into any SAP system via [abapGit](https://ab
 ### Log
 
 ```abap
-DATA(lo_log) = NEW zcl_shk_log( iv_object = 'ZAPPL' iv_subobject = 'TEST' ).
+" In-memory log (no SLG0 dependency — zero config)
+DATA(lo_log) = NEW zcl_shk_log( ).
 lo_log->zif_shk_log~add_free_text( iv_text = 'Processing started' iv_type = 'I' ).
-lo_log->zif_shk_log~add_sy_msg( ).
 lo_log->zif_shk_log~add_bapiret2( ls_return ).
-DATA(lv_handle) = lo_log->zif_shk_log~save( ).
+zcl_shk_log_gui=>show_by_messages( it_messages = lo_log->get_messages( ) iv_title = 'My Log' ).
+
+" Persistent log (requires SLG0 object — saved to DB, viewable in SLG1)
+DATA(lo_plog) = NEW zcl_shk_log( iv_object = 'ZSHK' ).
+lo_plog->zif_shk_log~add_free_text( 'Saved to SLG1' ).
+DATA(lv_handle) = lo_plog->zif_shk_log~save( ).
 zcl_shk_log_gui=>show_by_handle( lv_handle ).
 ```
 
