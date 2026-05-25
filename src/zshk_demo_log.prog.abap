@@ -3,11 +3,14 @@
 *&---------------------------------------------------------------------*
 REPORT zshk_demo_log.
 
+PARAMETERS p_obj TYPE balobj_d DEFAULT 'ZSHK'.
+
 START-OF-SELECTION.
 
-  DATA(lo_log) = NEW zcl_shk_log(
-    iv_object    = 'APPL_LOG'
-    iv_extnumber = 'ZSHK_DEMO' ).
+  " ============================================================
+  " 1) In-memory log (zero config — no SLG0 dependency)
+  " ============================================================
+  DATA(lo_log) = NEW zcl_shk_log( iv_extnumber = 'ZSHK_DEMO' ).
 
   " add_free_text
   lo_log->zif_shk_log~add_free_text( iv_text = 'Process started' iv_type = 'I' ).
@@ -47,33 +50,44 @@ START-OF-SELECTION.
   ENDTRY.
 
   " get_count / has_errors
-  DATA(lv_count) = lo_log->zif_shk_log~get_count( ).
-  DATA(lv_has_err) = lo_log->zif_shk_log~has_errors( ).
-  WRITE: / |Message count: { lv_count }|.
-  WRITE: / |Has errors: { lv_has_err }|.
+  WRITE: / |Message count: { lo_log->zif_shk_log~get_count( ) }|.
+  WRITE: / |Has errors: { lo_log->zif_shk_log~has_errors( ) }|.
 
-  " get_messages
-  DATA(lt_messages) = lo_log->zif_shk_log~get_messages( ).
-  WRITE: / |Messages retrieved: { lines( lt_messages ) }|.
+  " show_by_messages — in-memory popup
+  zcl_shk_log_gui=>show_by_messages(
+    it_messages = lo_log->zif_shk_log~get_messages( )
+    iv_title    = 'In-Memory Log Demo' ).
 
-  " save + show_by_handle
+  " save — object empty, DB save skipped
   TRY.
       DATA(lv_handle) = lo_log->zif_shk_log~save( ).
-      WRITE: / |Log saved, handle: { lv_handle }|.
+      WRITE: / |save (in-memory): handle = { lv_handle }|.
       zcl_shk_log_gui=>show_by_handle( lv_handle ).
-    CATCH zcx_shk_log INTO DATA(lo_save_err).
-      WRITE: / |Save error: { lo_save_err->get_text( ) }|.
+    CATCH zcx_shk_log INTO DATA(lo_err1).
+      WRITE: / |Error: { lo_err1->get_text( ) }|.
   ENDTRY.
 
-  " show_by_messages (in-memory display without save)
-  DATA(lo_log2) = NEW zcl_shk_log( ).
-  lo_log2->zif_shk_log~add_free_text( 'Direct message display' ).
-  lo_log2->zif_shk_log~add_free_text( iv_text = 'Second message' iv_type = 'W' ).
-  zcl_shk_log_gui=>show_by_messages(
-    it_messages = lo_log2->zif_shk_log~get_messages( )
-    iv_title    = 'Direct Display Demo' ).
+  " ============================================================
+  " 2) Persistent log (SLG0 object — saved to DB, viewable in SLG1)
+  " ============================================================
+  IF p_obj IS NOT INITIAL.
+    DATA(lo_plog) = NEW zcl_shk_log( iv_object = p_obj iv_extnumber = 'PERSISTENT_DEMO' ).
+    lo_plog->zif_shk_log~add_free_text( iv_text = 'This log is saved to SLG1' iv_type = 'I' ).
+    lo_plog->zif_shk_log~add_free_text( iv_text = 'Check SLG1 after execution' iv_type = 'S' ).
+    TRY.
+        DATA(lv_phandle) = lo_plog->zif_shk_log~save( ).
+        WRITE: / |save (persistent): handle = { lv_phandle }|.
+        WRITE: / |Check SLG1: Object = { p_obj }, ExtID = PERSISTENT_DEMO|.
+        zcl_shk_log_gui=>show_by_handle( lv_phandle ).
+      CATCH zcx_shk_log INTO DATA(lo_err2).
+        WRITE: / |Persistent save error: { lo_err2->get_text( ) }|.
+        WRITE: / 'SLG0 object not found. Define it in SLG0 first.'.
+    ENDTRY.
+  ENDIF.
 
-  " show_by_log (save + display in one call)
+  " ============================================================
+  " 3) show_by_log — save + display in one call
+  " ============================================================
   DATA(lo_log3) = NEW zcl_shk_log( iv_extnumber = 'SHOW_BY_LOG' ).
   lo_log3->zif_shk_log~add_free_text( 'show_by_log demo' ).
   lo_log3->zif_shk_log~add_free_text( iv_text = 'Combines save + display' iv_type = 'S' ).
@@ -84,5 +98,5 @@ START-OF-SELECTION.
   ENDTRY.
 
   " clear
-  lo_log2->zif_shk_log~clear( ).
-  WRITE: / |After clear, count: { lo_log2->zif_shk_log~get_count( ) }|.
+  lo_log->zif_shk_log~clear( ).
+  WRITE: / |After clear, count: { lo_log->zif_shk_log~get_count( ) }|.
