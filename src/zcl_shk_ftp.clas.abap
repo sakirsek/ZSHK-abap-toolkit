@@ -10,7 +10,8 @@ CLASS zcl_shk_ftp DEFINITION
         iv_host     TYPE clike
         iv_user     TYPE clike
         iv_password TYPE clike
-        iv_port     TYPE i DEFAULT 21.
+        iv_port     TYPE i DEFAULT 21
+        iv_passive  TYPE abap_bool DEFAULT abap_true.
 
   PROTECTED SECTION.
   PRIVATE SECTION.
@@ -20,6 +21,7 @@ CLASS zcl_shk_ftp DEFINITION
     DATA mv_port      TYPE i.
     DATA mv_handle    TYPE i.
     DATA mv_connected TYPE abap_bool.
+    DATA mv_passive   TYPE abap_bool.
 
     METHODS run_command
       IMPORTING
@@ -36,6 +38,7 @@ CLASS zcl_shk_ftp IMPLEMENTATION.
     mv_user      = iv_user.
     mv_password  = iv_password.
     mv_port      = iv_port.
+    mv_passive   = iv_passive.
     mv_connected = abap_false.
   ENDMETHOD.
 
@@ -108,6 +111,18 @@ CLASS zcl_shk_ftp IMPLEMENTATION.
     ENDIF.
 
     mv_connected = abap_true.
+
+    " Many FTP servers (e.g. the NURSAN targets) reject active-mode (PORT)
+    " data connections, so every dir/STOR fails with command_error while the
+    " login itself succeeds. SAPFTP/SAPFTPA default to active mode; switch to
+    " passive right after connect unless the caller opted out (iv_passive).
+    " Best-effort: a server that ignores the command keeps its default mode.
+    IF mv_passive = abap_true.
+      TRY.
+          zif_shk_ftp~set_passive( abap_true ).
+        CATCH zcx_shk_ftp.
+      ENDTRY.
+    ENDIF.
   ENDMETHOD.
 
   METHOD zif_shk_ftp~disconnect.

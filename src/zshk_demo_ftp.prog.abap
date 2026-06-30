@@ -7,6 +7,7 @@ PARAMETERS p_host TYPE text128 DEFAULT '10.249.33.61'.
 PARAMETERS p_user TYPE text50.
 PARAMETERS p_pwd  TYPE text50.
 PARAMETERS p_port TYPE i DEFAULT 21.
+PARAMETERS p_pasv TYPE abap_bool AS CHECKBOX DEFAULT 'X'.
 PARAMETERS p_dir  TYPE text255 DEFAULT 'MALHOTRA/IN'.
 PARAMETERS p_upl  TYPE abap_bool AS CHECKBOX.
 PARAMETERS p_noov TYPE abap_bool AS CHECKBOX.
@@ -19,7 +20,8 @@ START-OF-SELECTION.
     iv_host     = p_host
     iv_user     = p_user
     iv_password = p_pwd
-    iv_port     = p_port ).
+    iv_port     = p_port
+    iv_passive  = p_pasv ).
 
   TRY.
       " connect
@@ -29,7 +31,7 @@ START-OF-SELECTION.
       " is_connected
       WRITE: / 'is_connected:', lo_ftp->zif_shk_ftp~is_connected( ).
 
-      " set_passive
+      " set_passive (already on by default via iv_passive; shown for the API)
       lo_ftp->zif_shk_ftp~set_passive( abap_true ).
       WRITE: / 'set_passive: ON'.
 

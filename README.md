@@ -73,9 +73,10 @@ lo_mail->zif_shk_mail~send( ).
 ### FTP
 
 ```abap
+" Passive mode is enabled by default after connect (most servers reject
+" active/PORT data connections); pass iv_passive = abap_false for active mode.
 DATA(lo_ftp) = NEW zcl_shk_ftp( iv_host = '10.0.0.1' iv_user = 'ftpuser' iv_password = 'pass' ).
 lo_ftp->zif_shk_ftp~connect( ).
-lo_ftp->zif_shk_ftp~set_passive( abap_true ).
 lo_ftp->zif_shk_ftp~cd( 'incoming' ).
 lo_ftp->zif_shk_ftp~upload( iv_remote_path = 'export.csv' iv_content = lv_xstring ).
 lo_ftp->zif_shk_ftp~rename_file( iv_from = 'export.csv' iv_to = 'Archive/export.csv' ).
