@@ -25,7 +25,7 @@ That's it — all 10 modules are ready to use. No configuration required.
 | **FTP** | `ZCL_SHK_FTP` | FTP client — upload, download, rename, delete, directory navigation |
 | **HTTP** | `ZCL_SHK_HTTP` | REST client — GET/POST/PUT/DELETE with auth and custom headers |
 | **Job** | `ZCL_SHK_JOB` | Background job scheduling with singleton lock check |
-| **Date** | `ZCL_SHK_DATE` | Factory calendar — workday checks, date arithmetic, period helpers |
+| **Date** | `ZCL_SHK_DATE` | Factory calendar — workday checks, date arithmetic, period helpers, ms-precision timestamps |
 | **Progress** | `ZCL_SHK_PROGRESS` | Progress indicator with ETA estimation |
 | **Return** | `ZCL_SHK_RETURN` | BAPIRET2 message factory — create, collect, and check return messages |
 | **CSV** | `ZCL_SHK_CSV` | Internal table ↔ CSV conversion with Turkish charset support |
@@ -108,6 +108,13 @@ IF zcl_shk_date=>is_workday( ) = abap_true.
   DATA(lv_next) = zcl_shk_date=>add_workdays( iv_days = 5 ).
   DATA(lv_last_day) = zcl_shk_date=>get_month_last( ).
 ENDIF.
+
+" Local-time timestamp with millisecond precision (YYYYMMDDHHMMSSmmm)
+DATA(lv_ts) = zcl_shk_date=>get_timestamp_ms( ).
+
+" Unique file names: inserts _<timestamp> before the extension
+DATA(lv_name) = zcl_shk_date=>add_timestamp_suffix( `BOM.csv` ).
+" -> BOM_20260707143025123.csv
 ```
 
 ### Progress
