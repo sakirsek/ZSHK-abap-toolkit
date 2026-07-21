@@ -60,6 +60,15 @@ INTERFACE zif_shk_http PUBLIC.
     RAISING
       zcx_shk_http.
 
+  METHODS patch
+    IMPORTING
+      iv_path          TYPE clike DEFAULT ''
+      iv_body          TYPE clike DEFAULT ''
+    RETURNING
+      VALUE(rs_response) TYPE ty_s_response
+    RAISING
+      zcx_shk_http.
+
   METHODS delete
     IMPORTING
       iv_path          TYPE clike DEFAULT ''

@@ -70,6 +70,10 @@ CLASS zcl_shk_http IMPLEMENTATION.
     rs_response = execute( iv_method = 'PUT' iv_path = iv_path iv_body = iv_body ).
   ENDMETHOD.
 
+  METHOD zif_shk_http~patch.
+    rs_response = execute( iv_method = 'PATCH' iv_path = iv_path iv_body = iv_body ).
+  ENDMETHOD.
+
   METHOD zif_shk_http~delete.
     rs_response = execute( iv_method = 'DELETE' iv_path = iv_path ).
   ENDMETHOD.
