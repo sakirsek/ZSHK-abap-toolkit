@@ -59,3 +59,17 @@ START-OF-SELECTION.
       iv_from = lv_first iv_to = lv_last iv_factory_cal_id = p_cal ).
     WRITE: / |Workdays this month: { lv_count2 }|.
   ENDIF.
+
+  ULINE.
+
+  " get_timestamp_ms — local-time YYYYMMDDHHMMSSmmm (17 chars, ms precision)
+  DATA(lv_ts) = zcl_shk_date=>get_timestamp_ms( ).
+  WRITE: / |Timestamp (ms): { lv_ts }|.
+
+  " add_timestamp_suffix — inserts _<timestamp> before the extension
+  DATA(lv_fname1) = zcl_shk_date=>add_timestamp_suffix( `BOM.csv` ).
+  WRITE: / |BOM.csv      -> { lv_fname1 }|.
+
+  " no extension -> appended at the end
+  DATA(lv_fname2) = zcl_shk_date=>add_timestamp_suffix( `report` ).
+  WRITE: / |report       -> { lv_fname2 }|.

@@ -59,6 +59,22 @@ CLASS zcl_shk_date DEFINITION
       RETURNING
         VALUE(rv_count)   TYPE i.
 
+    "! Lokal saatle YYYYMMDDHHMMSSmmm (17 hane, milisaniye dahil) damgası döner
+    CLASS-METHODS get_timestamp_ms
+      IMPORTING
+        iv_tzone            TYPE sy-zonlo DEFAULT sy-zonlo
+      RETURNING
+        VALUE(rv_timestamp) TYPE string.
+
+    "! Dosya adına uzantıdan önce _YYYYMMDDHHMMSSmmm eki ekler
+    "! (uzantı yoksa sona ekler), ör. BOM.csv -> BOM_20260707143025123.csv
+    CLASS-METHODS add_timestamp_suffix
+      IMPORTING
+        iv_filename        TYPE string
+        iv_tzone           TYPE sy-zonlo DEFAULT sy-zonlo
+      RETURNING
+        VALUE(rv_filename) TYPE string.
+
   PROTECTED SECTION.
   PRIVATE SECTION.
 ENDCLASS.
@@ -163,6 +179,35 @@ CLASS zcl_shk_date IMPLEMENTATION.
 
     IF sy-subrc = 0.
       rv_count = lines( lt_dats ).
+    ENDIF.
+  ENDMETHOD.
+
+  METHOD get_timestamp_ms.
+    DATA lv_ts TYPE timestampl.
+
+    GET TIME STAMP FIELD lv_ts.
+    DATA(lv_msec) = CONV i( trunc( frac( lv_ts ) * 1000 ) ).
+
+    CONVERT TIME STAMP lv_ts TIME ZONE iv_tzone
+            INTO DATE DATA(lv_date) TIME DATA(lv_time).
+    IF sy-subrc <> 0.
+      " Zaman dilimi çözülemezse sistem tarih/saatine düş (ms korunur)
+      lv_date = sy-datum.
+      lv_time = sy-uzeit.
+    ENDIF.
+
+    rv_timestamp = |{ lv_date }{ lv_time }{ lv_msec WIDTH = 3 ALIGN = RIGHT PAD = '0' }|.
+  ENDMETHOD.
+
+  METHOD add_timestamp_suffix.
+    DATA(lv_suffix) = |_{ get_timestamp_ms( iv_tzone ) }|.
+
+    DATA(lv_dot) = find( val = iv_filename sub = '.' occ = -1 ).
+    IF lv_dot > 0.
+      rv_filename = substring( val = iv_filename len = lv_dot ) && lv_suffix &&
+                    substring( val = iv_filename off = lv_dot ).
+    ELSE.
+      rv_filename = iv_filename && lv_suffix.
     ENDIF.
   ENDMETHOD.
 ENDCLASS.
