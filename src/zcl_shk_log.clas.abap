@@ -135,8 +135,37 @@ CLASS zcl_shk_log IMPLEMENTATION.
     ensure_log_created( ).
 
     DATA ls_bal_msg TYPE bal_s_msg.
+    DATA lv_idx     TYPE i.
 
     LOOP AT mt_messages INTO DATA(ls_msg).
+      " sy-tabix cagrilan FM'den sonra guvenilmez - simdi sakla
+      lv_idx = sy-tabix.
+
+      IF ls_msg-id IS INITIAL.
+        " Serbest metin (add_free_text / add_exception).
+        " BAL_LOG_MSG_ADD gecerli bir msgid/msgno ister; ayrica metnin
+        " tamami msgv1'e konursa symsgv = 50 karakterde kirpilir.
+        " BAL_LOG_MSG_ADD_FREE_TEXT metni msgv1..msgv4'e boler (200
+        " karakter) ve standart serbest-metin msgid/msgno'sunu kullanir.
+        CALL FUNCTION 'BAL_LOG_MSG_ADD_FREE_TEXT'
+          EXPORTING
+            i_log_handle     = mv_log_handle
+            i_msgty          = ls_msg-type
+            i_text           = ls_msg-message
+          EXCEPTIONS
+            log_not_found    = 1
+            msg_inconsistent = 2
+            log_is_full      = 3
+            OTHERS           = 4.
+
+        IF sy-subrc <> 0.
+          RAISE EXCEPTION TYPE zcx_shk_log
+            EXPORTING iv_text = |BAL_LOG_MSG_ADD_FREE_TEXT failed for message { lv_idx }|.
+        ENDIF.
+
+        CONTINUE.
+      ENDIF.
+
       CLEAR ls_bal_msg.
       ls_bal_msg-msgty = ls_msg-type.
       ls_bal_msg-msgid = ls_msg-id.
@@ -158,7 +187,7 @@ CLASS zcl_shk_log IMPLEMENTATION.
 
       IF sy-subrc <> 0.
         RAISE EXCEPTION TYPE zcx_shk_log
-          EXPORTING iv_text = |BAL_LOG_MSG_ADD failed for message { sy-tabix }|.
+          EXPORTING iv_text = |BAL_LOG_MSG_ADD failed for message { lv_idx }|.
       ENDIF.
     ENDLOOP.
 
