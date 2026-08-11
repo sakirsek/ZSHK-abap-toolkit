@@ -44,9 +44,15 @@ lo_log->zif_shk_log~add_bapiret2( ls_return ).
 zcl_shk_log_gui=>show_by_messages( it_messages = lo_log->get_messages( ) iv_title = 'Results' ).
 
 " Persistent: saved to DB, viewable in SLG1
+" Default retention 1 year -> SAP's weekly SAP_REORG_APPLLOG job deletes it afterwards
 DATA(lo_plog) = NEW zcl_shk_log( iv_object = 'ZSHK' ).
 lo_plog->zif_shk_log~add_free_text( 'Saved to SLG1' ).
 lo_plog->zif_shk_log~save( ).
+
+" Custom retention: 30 days / keep forever
+DATA(lo_short) = NEW zcl_shk_log( iv_object = 'ZSHK' iv_keep_days = 30 ).
+DATA(lo_keep)  = NEW zcl_shk_log( iv_object = 'ZSHK'
+                                  iv_keep_days = zcl_shk_log=>c_keep_forever ).
 ```
 
 ### BDC
