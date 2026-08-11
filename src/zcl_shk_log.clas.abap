@@ -5,19 +5,27 @@ CLASS zcl_shk_log DEFINITION
   PUBLIC SECTION.
     INTERFACES zif_shk_log.
 
+    CONSTANTS c_keep_days_default TYPE i VALUE 365.
+    CONSTANTS c_keep_forever      TYPE i VALUE -1.
+
     METHODS constructor
       IMPORTING
         iv_object    TYPE balobj_d  OPTIONAL
         iv_subobject TYPE balsubobj OPTIONAL
-        iv_extnumber TYPE balnrext  OPTIONAL.
+        iv_extnumber TYPE balnrext  OPTIONAL
+        iv_keep_days TYPE i         DEFAULT c_keep_days_default.
 
   PROTECTED SECTION.
   PRIVATE SECTION.
+    CONSTANTS c_date_never TYPE d VALUE '99991231'.
+    CONSTANTS c_max_days   TYPE i VALUE 36500.
+
     DATA mv_log_handle TYPE balloghndl.
     DATA mt_messages   TYPE zif_shk_log=>ty_t_msg.
     DATA mv_object     TYPE balobj_d.
     DATA mv_subobject  TYPE balsubobj.
     DATA mv_extnumber  TYPE balnrext.
+    DATA mv_keep_days  TYPE i.
     DATA mv_created    TYPE abap_bool.
 
     METHODS ensure_log_created
@@ -40,6 +48,7 @@ CLASS zcl_shk_log IMPLEMENTATION.
     mv_object    = iv_object.
     mv_subobject = iv_subobject.
     mv_extnumber = iv_extnumber.
+    mv_keep_days = iv_keep_days.
     mv_created   = abap_false.
   ENDMETHOD.
 
@@ -49,12 +58,25 @@ CLASS zcl_shk_log IMPLEMENTATION.
     ENDIF.
 
     DATA ls_header TYPE bal_s_log.
+    DATA lv_days   TYPE i.
+
     ls_header-object    = mv_object.
     ls_header-subobject = mv_subobject.
     ls_header-extnumber = mv_extnumber.
     ls_header-aldate    = sy-datum.
     ls_header-altime    = sy-uzeit.
     ls_header-aluser    = sy-uname.
+
+    IF mv_keep_days = c_keep_forever.
+      ls_header-aldate_del = c_date_never.
+      ls_header-del_before = abap_false.
+    ELSE.
+      lv_days = COND i( WHEN mv_keep_days > c_max_days THEN c_max_days
+                        WHEN mv_keep_days > 0          THEN mv_keep_days
+                        ELSE c_keep_days_default ).
+      ls_header-aldate_del = sy-datum + lv_days.
+      ls_header-del_before = abap_true.
+    ENDIF.
 
     CALL FUNCTION 'BAL_LOG_CREATE'
       EXPORTING
