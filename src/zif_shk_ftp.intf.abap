@@ -68,6 +68,19 @@ INTERFACE zif_shk_ftp PUBLIC.
     RAISING
       zcx_shk_ftp.
 
+  "! Files only (no directories, no FTP reply lines), parsed from the
+  "! server listing: name always, size/date when the server sends a long
+  "! (Unix or Windows/IIS) listing. Mask is a case-insensitive CP pattern.
+  "! For directory names containing blanks, cd into them and list '.'.
+  METHODS list_files
+    IMPORTING
+      iv_directory    TYPE clike DEFAULT '.'
+      iv_mask         TYPE clike DEFAULT '*'
+    RETURNING
+      VALUE(rt_files) TYPE ty_t_file
+    RAISING
+      zcx_shk_ftp.
+
   METHODS delete_file
     IMPORTING
       iv_remote_path TYPE clike

@@ -22,7 +22,7 @@ That's it — all 10 modules are ready to use. No configuration required.
 | **Log** | `ZCL_SHK_LOG` | Application log with in-memory popup or persistent SLG1 storage |
 | **BDC** | `ZCL_SHK_BDC` | Batch input recorder — build screens, fields, and run transactions |
 | **Mail** | `ZCL_SHK_MAIL` | HTML emails with attachments, inline tables, CC/BCC via CL_BCS |
-| **FTP** | `ZCL_SHK_FTP` | FTP client — upload, download, rename, delete, directory navigation |
+| **FTP** | `ZCL_SHK_FTP` | FTP client — upload, download, rename, delete, directory navigation, parsed file listing with mask |
 | **HTTP** | `ZCL_SHK_HTTP` | REST client — GET/POST/PUT/DELETE with auth and custom headers |
 | **Job** | `ZCL_SHK_JOB` | Background job scheduling with singleton lock check |
 | **Date** | `ZCL_SHK_DATE` | Factory calendar — workday checks, date arithmetic, period helpers, ms-precision timestamps |
@@ -84,6 +84,12 @@ lo_mail->zif_shk_mail~send( ).
 DATA(lo_ftp) = NEW zcl_shk_ftp( iv_host = '10.0.0.1' iv_user = 'ftpuser' iv_password = 'pass' ).
 lo_ftp->zif_shk_ftp~connect( ).
 lo_ftp->zif_shk_ftp~cd( 'incoming' ).
+" list_files: files only (no directories, no FTP reply lines), name + size/date
+" parsed from Unix, Windows/IIS or plain listings; mask is case-insensitive.
+" list_directory still returns the raw server lines unchanged.
+LOOP AT lo_ftp->zif_shk_ftp~list_files( iv_mask = '*.edi' ) INTO DATA(ls_file).
+  DATA(lv_edi) = lo_ftp->zif_shk_ftp~download( ls_file-name ).
+ENDLOOP.
 lo_ftp->zif_shk_ftp~upload( iv_remote_path = 'export.csv' iv_content = lv_xstring ).
 lo_ftp->zif_shk_ftp~rename_file( iv_from = 'export.csv' iv_to = 'Archive/export.csv' ).
 lo_ftp->zif_shk_ftp~disconnect( ).
@@ -161,7 +167,7 @@ Each module comes with a runnable demo program. Open in `SE38` to see it in acti
 | `ZSHK_DEMO_LOG` | Creates sample log entries and displays them in a popup |
 | `ZSHK_DEMO_BDC` | Runs SE16 via batch input |
 | `ZSHK_DEMO_MAIL` | Composes and sends an HTML email with a table |
-| `ZSHK_DEMO_FTP` | Connects to an FTP server, uploads, downloads, and renames files |
+| `ZSHK_DEMO_FTP` | Connects to an FTP server, lists (raw and parsed), uploads, downloads, and renames files |
 | `ZSHK_DEMO_HTTP` | Sends a GET request to httpbin.org |
 | `ZSHK_DEMO_JOB` | Schedules and submits a background job |
 | `ZSHK_DEMO_DATE` | Factory calendar calculations for today |

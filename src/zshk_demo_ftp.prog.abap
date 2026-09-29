@@ -40,13 +40,23 @@ START-OF-SELECTION.
       WRITE: / 'cd:', p_dir.
       ULINE.
 
-      " list_directory
+      " list_directory (raw server lines)
       WRITE: / 'Directory listing (current):'.
       DATA(lt_files) = lo_ftp->zif_shk_ftp~list_directory( '.' ).
       LOOP AT lt_files INTO DATA(ls_file).
         WRITE: / '  ', ls_file-name.
       ENDLOOP.
       WRITE: / 'Total:', lines( lt_files ), 'entries'.
+      ULINE.
+
+      " list_files (parsed: files only, name/size/date, mask)
+      WRITE: / 'list_files (current, mask *):'.
+      DATA(lt_parsed) = lo_ftp->zif_shk_ftp~list_files( iv_directory = '.'
+                                                         iv_mask      = '*' ).
+      LOOP AT lt_parsed INTO DATA(ls_parsed).
+        WRITE: / '  ', ls_parsed-name, ls_parsed-size, ls_parsed-date.
+      ENDLOOP.
+      WRITE: / 'Total:', lines( lt_parsed ), 'files'.
       ULINE.
 
       " file_exists

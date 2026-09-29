@@ -13,6 +13,16 @@ CLASS zcl_shk_ftp DEFINITION
         iv_port     TYPE i DEFAULT 21
         iv_passive  TYPE abap_bool DEFAULT abap_true.
 
+    "! Parses raw FTP listing lines (dir/ls output) into files.
+    "! Skips FTP reply lines (150/226 ...), 'total n', directories, '.'/'..'.
+    "! Understands Unix long, Windows/IIS long and plain name (NLST) lines.
+    CLASS-METHODS parse_listing
+      IMPORTING
+        it_lines        TYPE string_table
+        iv_mask         TYPE clike DEFAULT '*'
+      RETURNING
+        VALUE(rt_files) TYPE zif_shk_ftp=>ty_t_file.
+
   PROTECTED SECTION.
   PRIVATE SECTION.
     DATA mv_host      TYPE string.
@@ -24,6 +34,14 @@ CLASS zcl_shk_ftp DEFINITION
     DATA mv_passive   TYPE abap_bool.
 
     METHODS run_command
+      IMPORTING
+        iv_command       TYPE clike
+      RETURNING
+        VALUE(rt_result) TYPE string_table
+      RAISING
+        zcx_shk_ftp.
+
+    METHODS run_command_raw
       IMPORTING
         iv_command       TYPE clike
       RETURNING
@@ -43,6 +61,15 @@ CLASS zcl_shk_ftp IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD run_command.
+    LOOP AT run_command_raw( iv_command ) INTO DATA(lv_line).
+      DATA(lv_str) = condense( lv_line ).
+      IF lv_str IS NOT INITIAL.
+        APPEND lv_str TO rt_result.
+      ENDIF.
+    ENDLOOP.
+  ENDMETHOD.
+
+  METHOD run_command_raw.
     IF mv_connected = abap_false.
       RAISE EXCEPTION TYPE zcx_shk_ftp
         EXPORTING iv_text = 'Not connected'.
@@ -68,10 +95,66 @@ CLASS zcl_shk_ftp IMPLEMENTATION.
         EXPORTING iv_text = |FTP command failed: { iv_command }|.
     ENDIF.
 
-    LOOP AT lt_raw INTO DATA(lv_line).
-      DATA(lv_str) = condense( CONV string( lv_line ) ).
-      IF lv_str IS NOT INITIAL.
-        APPEND lv_str TO rt_result.
+    rt_result = VALUE #( FOR lv_raw IN lt_raw ( CONV string( lv_raw ) ) ).
+  ENDMETHOD.
+
+  METHOD parse_listing.
+    CONSTANTS lc_unix TYPE string
+      VALUE `^([-dlbcps])[-rwxsStT]{9}\S*\s+\d+\s+\S+\s+(?:\S+\s+)?(\d+)\s+([A-Za-z]{3}\s+\d{1,2}\s+(?:\d{1,2}:\d{2}|\d{4}))\s(.+)$`.
+    CONSTANTS lc_windows TYPE string
+      VALUE `^(\d{2}-\d{2}-\d{2,4}\s+\d{1,2}:\d{2}\s*(?:AM|PM)?)\s+(<DIR>|\d+)\s+(.+)$`.
+
+    DATA lv_type TYPE string.
+    DATA lv_size TYPE string.
+
+    DATA(lv_mask) = to_upper( condense( CONV string( iv_mask ) ) ).
+    IF lv_mask IS INITIAL.
+      lv_mask = `*`.
+    ENDIF.
+
+    LOOP AT it_lines INTO DATA(lv_line).
+      REPLACE ALL OCCURRENCES OF cl_abap_char_utilities=>cr_lf(1) IN lv_line WITH ``.
+      lv_line = shift_right( val = shift_left( val = lv_line sub = ` ` ) sub = ` ` ).
+
+      IF lv_line IS INITIAL
+         OR matches( val = lv_line regex = `\d{3}([ -].*)?` )
+         OR matches( val = lv_line regex = `total\s+\d+` case = abap_false )
+         OR matches( val = lv_line regex = `ftp>.*` case = abap_false ).
+        CONTINUE.
+      ENDIF.
+
+      DATA(ls_file) = VALUE zif_shk_ftp=>ty_s_file( ).
+      CLEAR: lv_type, lv_size.
+
+      FIND REGEX lc_unix IN lv_line SUBMATCHES lv_type lv_size ls_file-date ls_file-name.
+      IF sy-subrc = 0.
+        IF lv_type <> `-`.
+          CONTINUE.
+        ENDIF.
+      ELSE.
+        FIND REGEX lc_windows IN lv_line IGNORING CASE SUBMATCHES ls_file-date lv_size ls_file-name.
+        IF sy-subrc = 0.
+          IF to_upper( lv_size ) = `<DIR>`.
+            CONTINUE.
+          ENDIF.
+        ELSE.
+          SPLIT lv_line AT `/` INTO TABLE DATA(lt_parts).
+          ls_file-name = VALUE #( lt_parts[ lines( lt_parts ) ] OPTIONAL ).
+        ENDIF.
+      ENDIF.
+
+      IF ls_file-name IS INITIAL OR ls_file-name = `.` OR ls_file-name = `..`.
+        CONTINUE.
+      ENDIF.
+
+      TRY.
+          ls_file-size = COND #( WHEN lv_size CO `0123456789` AND lv_size IS NOT INITIAL THEN lv_size ).
+        CATCH cx_sy_conversion_error.
+          ls_file-size = 0.
+      ENDTRY.
+
+      IF to_upper( ls_file-name ) CP lv_mask.
+        APPEND ls_file TO rt_files.
       ENDIF.
     ENDLOOP.
   ENDMETHOD.
@@ -272,6 +355,20 @@ CLASS zcl_shk_ftp IMPLEMENTATION.
     LOOP AT lt_raw INTO DATA(lv_line).
       APPEND VALUE zif_shk_ftp=>ty_s_file( name = lv_line ) TO rt_files.
     ENDLOOP.
+  ENDMETHOD.
+
+  METHOD zif_shk_ftp~list_files.
+    " 'dir' asks for the long listing (size/date); servers or SAPFTP builds
+    " that refuse it still answer 'ls', which parse_listing also understands.
+    DATA lt_lines TYPE string_table.
+    TRY.
+        lt_lines = run_command_raw( |dir { iv_directory }| ).
+      CATCH zcx_shk_ftp.
+        lt_lines = run_command_raw( |ls { iv_directory }| ).
+    ENDTRY.
+
+    rt_files = parse_listing( it_lines = lt_lines
+                              iv_mask  = iv_mask ).
   ENDMETHOD.
 
   METHOD zif_shk_ftp~delete_file.
