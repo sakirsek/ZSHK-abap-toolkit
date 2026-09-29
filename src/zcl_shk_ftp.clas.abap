@@ -1,28 +1,27 @@
-CLASS zcl_shk_ftp DEFINITION
-  PUBLIC
-  CREATE PUBLIC.
+class ZCL_SHK_FTP definition
+  public
+  create public .
 
-  PUBLIC SECTION.
-    INTERFACES zif_shk_ftp.
+public section.
 
-    METHODS constructor
-      IMPORTING
-        iv_host     TYPE clike
-        iv_user     TYPE clike
-        iv_password TYPE clike
-        iv_port     TYPE i DEFAULT 21
-        iv_passive  TYPE abap_bool DEFAULT abap_true.
+  interfaces ZIF_SHK_FTP .
 
+  methods CONSTRUCTOR
+    importing
+      !IV_HOST type CLIKE
+      !IV_USER type CLIKE
+      !IV_PASSWORD type CLIKE
+      !IV_PORT type I default 21
+      !IV_PASSIVE type ABAP_BOOL default ABAP_TRUE .
     "! Parses raw FTP listing lines (dir/ls output) into files.
     "! Skips FTP reply lines (150/226 ...), 'total n', directories, '.'/'..'.
     "! Understands Unix long, Windows/IIS long and plain name (NLST) lines.
-    CLASS-METHODS parse_listing
-      IMPORTING
-        it_lines        TYPE string_table
-        iv_mask         TYPE clike DEFAULT '*'
-      RETURNING
-        VALUE(rt_files) TYPE zif_shk_ftp=>ty_t_file.
-
+  class-methods PARSE_LISTING
+    importing
+      !IT_LINES type STRING_TABLE
+      !IV_MASK type CLIKE default '*'
+    returning
+      value(RT_FILES) type ZIF_SHK_FTP=>TY_T_FILE .
   PROTECTED SECTION.
   PRIVATE SECTION.
     DATA mv_host      TYPE string.
@@ -50,7 +49,11 @@ CLASS zcl_shk_ftp DEFINITION
         zcx_shk_ftp.
 ENDCLASS.
 
-CLASS zcl_shk_ftp IMPLEMENTATION.
+
+
+CLASS ZCL_SHK_FTP IMPLEMENTATION.
+
+
   METHOD constructor.
     mv_host      = iv_host.
     mv_user      = iv_user.
@@ -60,43 +63,6 @@ CLASS zcl_shk_ftp IMPLEMENTATION.
     mv_connected = abap_false.
   ENDMETHOD.
 
-  METHOD run_command.
-    LOOP AT run_command_raw( iv_command ) INTO DATA(lv_line).
-      DATA(lv_str) = condense( lv_line ).
-      IF lv_str IS NOT INITIAL.
-        APPEND lv_str TO rt_result.
-      ENDIF.
-    ENDLOOP.
-  ENDMETHOD.
-
-  METHOD run_command_raw.
-    IF mv_connected = abap_false.
-      RAISE EXCEPTION TYPE zcx_shk_ftp
-        EXPORTING iv_text = 'Not connected'.
-    ENDIF.
-
-    TYPES ty_line(1024) TYPE c.
-    DATA lt_raw TYPE STANDARD TABLE OF ty_line.
-
-    CALL FUNCTION 'FTP_COMMAND'
-      EXPORTING
-        handle        = mv_handle
-        command       = CONV char200( iv_command )
-      TABLES
-        data          = lt_raw
-      EXCEPTIONS
-        tcpip_error   = 1
-        command_error = 2
-        data_error    = 3
-        OTHERS        = 4.
-
-    IF sy-subrc <> 0.
-      RAISE EXCEPTION TYPE zcx_shk_ftp
-        EXPORTING iv_text = |FTP command failed: { iv_command }|.
-    ENDIF.
-
-    rt_result = VALUE #( FOR lv_raw IN lt_raw ( CONV string( lv_raw ) ) ).
-  ENDMETHOD.
 
   METHOD parse_listing.
     CONSTANTS lc_unix TYPE string
@@ -159,6 +125,57 @@ CLASS zcl_shk_ftp IMPLEMENTATION.
     ENDLOOP.
   ENDMETHOD.
 
+
+  METHOD run_command.
+    LOOP AT run_command_raw( iv_command ) INTO DATA(lv_line).
+      DATA(lv_str) = condense( lv_line ).
+      IF lv_str IS NOT INITIAL.
+        APPEND lv_str TO rt_result.
+      ENDIF.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD run_command_raw.
+    IF mv_connected = abap_false.
+      RAISE EXCEPTION TYPE zcx_shk_ftp
+        EXPORTING iv_text = 'Not connected'.
+    ENDIF.
+
+    TYPES ty_line(1024) TYPE c.
+    DATA lt_raw TYPE STANDARD TABLE OF ty_line.
+
+    CALL FUNCTION 'FTP_COMMAND'
+      EXPORTING
+        handle        = mv_handle
+        command       = CONV char200( iv_command )
+      TABLES
+        data          = lt_raw
+      EXCEPTIONS
+        tcpip_error   = 1
+        command_error = 2
+        data_error    = 3
+        OTHERS        = 4.
+
+    IF sy-subrc <> 0.
+      RAISE EXCEPTION TYPE zcx_shk_ftp
+        EXPORTING iv_text = |FTP command failed: { iv_command }|.
+    ENDIF.
+
+    rt_result = VALUE #( FOR lv_raw IN lt_raw ( CONV string( lv_raw ) ) ).
+  ENDMETHOD.
+
+
+  METHOD zif_shk_ftp~cd.
+    run_command( |cd { iv_directory }| ).
+  ENDMETHOD.
+
+
+  METHOD zif_shk_ftp~command.
+    rt_result = run_command( iv_command ).
+  ENDMETHOD.
+
+
   METHOD zif_shk_ftp~connect.
     IF mv_connected = abap_true.
       RETURN.
@@ -208,6 +225,12 @@ CLASS zcl_shk_ftp IMPLEMENTATION.
     ENDIF.
   ENDMETHOD.
 
+
+  METHOD zif_shk_ftp~delete_file.
+    run_command( |delete { iv_remote_path }| ).
+  ENDMETHOD.
+
+
   METHOD zif_shk_ftp~disconnect.
     IF mv_connected = abap_false.
       RETURN.
@@ -220,9 +243,123 @@ CLASS zcl_shk_ftp IMPLEMENTATION.
     mv_connected = abap_false.
   ENDMETHOD.
 
-  METHOD zif_shk_ftp~cd.
-    run_command( |cd { iv_directory }| ).
+
+  METHOD zif_shk_ftp~download.
+    IF mv_connected = abap_false.
+      RAISE EXCEPTION TYPE zcx_shk_ftp
+        EXPORTING iv_text = 'Not connected'.
+    ENDIF.
+
+    DATA lt_data TYPE STANDARD TABLE OF raw255.
+    DATA lv_len  TYPE i.
+
+    CALL FUNCTION 'FTP_SERVER_TO_R3'
+      EXPORTING
+        handle         = mv_handle
+        fname          = CONV char200( iv_remote_path )
+      IMPORTING
+        blob_length    = lv_len
+      TABLES
+        blob           = lt_data
+      EXCEPTIONS
+        tcpip_error    = 1
+        command_error  = 2
+        data_error     = 3
+        OTHERS         = 4.
+
+    IF sy-subrc <> 0.
+      RAISE EXCEPTION TYPE zcx_shk_ftp
+        EXPORTING iv_text = |FTP download failed: { iv_remote_path }|.
+    ENDIF.
+
+    CALL FUNCTION 'SCMS_BINARY_TO_XSTRING'
+      EXPORTING
+        input_length = lv_len
+      IMPORTING
+        buffer       = rv_content
+      TABLES
+        binary_tab   = lt_data
+      EXCEPTIONS
+        failed       = 1
+        OTHERS       = 2.
   ENDMETHOD.
+
+
+  METHOD zif_shk_ftp~download_text.
+    DATA(lv_xstring) = zif_shk_ftp~download( iv_remote_path ).
+
+    DATA lv_text TYPE string.
+    DATA lo_conv TYPE REF TO cl_abap_conv_in_ce.
+    lo_conv = cl_abap_conv_in_ce=>create( encoding = iv_encoding input = lv_xstring ).
+    lo_conv->read( IMPORTING data = lv_text ).
+
+    SPLIT lv_text AT cl_abap_char_utilities=>cr_lf INTO TABLE rt_lines.
+    IF lines( rt_lines ) <= 1.
+      SPLIT lv_text AT cl_abap_char_utilities=>newline INTO TABLE rt_lines.
+    ENDIF.
+
+    DELETE rt_lines WHERE table_line IS INITIAL.
+  ENDMETHOD.
+
+
+  METHOD zif_shk_ftp~file_exists.
+    IF mv_connected = abap_false.
+      RAISE EXCEPTION TYPE zcx_shk_ftp
+        EXPORTING iv_text = 'Not connected'.
+    ENDIF.
+
+    TYPES ty_line(1024) TYPE c.
+    DATA lt_result TYPE STANDARD TABLE OF ty_line.
+
+    CALL FUNCTION 'FTP_COMMAND'
+      EXPORTING
+        handle        = mv_handle
+        command       = CONV char200( |ls { iv_remote_path }| )
+      TABLES
+        data          = lt_result
+      EXCEPTIONS
+        tcpip_error   = 1
+        command_error = 2
+        data_error    = 3
+        OTHERS        = 4.
+
+    rv_exists = xsdbool( sy-subrc = 0 AND lt_result IS NOT INITIAL ).
+  ENDMETHOD.
+
+
+  METHOD zif_shk_ftp~is_connected.
+    rv_connected = mv_connected.
+  ENDMETHOD.
+
+
+  METHOD zif_shk_ftp~list_directory.
+    DATA(lt_raw) = run_command( |ls { iv_directory }| ).
+
+    LOOP AT lt_raw INTO DATA(lv_line).
+      APPEND VALUE zif_shk_ftp=>ty_s_file( name = lv_line ) TO rt_files.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD zif_shk_ftp~list_files.
+    " 'dir' asks for the long listing (size/date); servers or SAPFTP builds
+    " that refuse it still answer 'ls', which parse_listing also understands.
+    DATA lt_lines TYPE string_table.
+    TRY.
+        lt_lines = run_command_raw( |dir { iv_directory }| ).
+      CATCH zcx_shk_ftp.
+        lt_lines = run_command_raw( |ls { iv_directory }| ).
+    ENDTRY.
+
+    rt_files = parse_listing( it_lines = lt_lines
+                              iv_mask  = iv_mask ).
+  ENDMETHOD.
+
+
+  METHOD zif_shk_ftp~rename_file.
+    run_command( |rename { iv_from } { iv_to }| ).
+  ENDMETHOD.
+
 
   METHOD zif_shk_ftp~set_passive.
     IF iv_on = abap_true.
@@ -232,13 +369,6 @@ CLASS zcl_shk_ftp IMPLEMENTATION.
     ENDIF.
   ENDMETHOD.
 
-  METHOD zif_shk_ftp~rename_file.
-    run_command( |rename { iv_from } { iv_to }| ).
-  ENDMETHOD.
-
-  METHOD zif_shk_ftp~command.
-    rt_result = run_command( iv_command ).
-  ENDMETHOD.
 
   METHOD zif_shk_ftp~upload.
     IF mv_connected = abap_false.
@@ -282,6 +412,7 @@ CLASS zcl_shk_ftp IMPLEMENTATION.
     ENDIF.
   ENDMETHOD.
 
+
   METHOD zif_shk_ftp~upload_text.
     DATA lv_xstring TYPE xstring.
     DATA lo_conv TYPE REF TO cl_abap_conv_out_ce.
@@ -291,115 +422,5 @@ CLASS zcl_shk_ftp IMPLEMENTATION.
       iv_remote_path = iv_remote_path
       iv_content     = lv_xstring
       iv_overwrite   = iv_overwrite ).
-  ENDMETHOD.
-
-  METHOD zif_shk_ftp~download.
-    IF mv_connected = abap_false.
-      RAISE EXCEPTION TYPE zcx_shk_ftp
-        EXPORTING iv_text = 'Not connected'.
-    ENDIF.
-
-    DATA lt_data TYPE STANDARD TABLE OF raw255.
-    DATA lv_len  TYPE i.
-
-    CALL FUNCTION 'FTP_SERVER_TO_R3'
-      EXPORTING
-        handle         = mv_handle
-        fname          = CONV char200( iv_remote_path )
-      IMPORTING
-        blob_length    = lv_len
-      TABLES
-        blob           = lt_data
-      EXCEPTIONS
-        tcpip_error    = 1
-        command_error  = 2
-        data_error     = 3
-        OTHERS         = 4.
-
-    IF sy-subrc <> 0.
-      RAISE EXCEPTION TYPE zcx_shk_ftp
-        EXPORTING iv_text = |FTP download failed: { iv_remote_path }|.
-    ENDIF.
-
-    CALL FUNCTION 'SCMS_BINARY_TO_XSTRING'
-      EXPORTING
-        input_length = lv_len
-      IMPORTING
-        buffer       = rv_content
-      TABLES
-        binary_tab   = lt_data
-      EXCEPTIONS
-        failed       = 1
-        OTHERS       = 2.
-  ENDMETHOD.
-
-  METHOD zif_shk_ftp~download_text.
-    DATA(lv_xstring) = zif_shk_ftp~download( iv_remote_path ).
-
-    DATA lv_text TYPE string.
-    DATA lo_conv TYPE REF TO cl_abap_conv_in_ce.
-    lo_conv = cl_abap_conv_in_ce=>create( encoding = iv_encoding input = lv_xstring ).
-    lo_conv->read( IMPORTING data = lv_text ).
-
-    SPLIT lv_text AT cl_abap_char_utilities=>cr_lf INTO TABLE rt_lines.
-    IF lines( rt_lines ) <= 1.
-      SPLIT lv_text AT cl_abap_char_utilities=>newline INTO TABLE rt_lines.
-    ENDIF.
-
-    DELETE rt_lines WHERE table_line IS INITIAL.
-  ENDMETHOD.
-
-  METHOD zif_shk_ftp~list_directory.
-    DATA(lt_raw) = run_command( |ls { iv_directory }| ).
-
-    LOOP AT lt_raw INTO DATA(lv_line).
-      APPEND VALUE zif_shk_ftp=>ty_s_file( name = lv_line ) TO rt_files.
-    ENDLOOP.
-  ENDMETHOD.
-
-  METHOD zif_shk_ftp~list_files.
-    " 'dir' asks for the long listing (size/date); servers or SAPFTP builds
-    " that refuse it still answer 'ls', which parse_listing also understands.
-    DATA lt_lines TYPE string_table.
-    TRY.
-        lt_lines = run_command_raw( |dir { iv_directory }| ).
-      CATCH zcx_shk_ftp.
-        lt_lines = run_command_raw( |ls { iv_directory }| ).
-    ENDTRY.
-
-    rt_files = parse_listing( it_lines = lt_lines
-                              iv_mask  = iv_mask ).
-  ENDMETHOD.
-
-  METHOD zif_shk_ftp~delete_file.
-    run_command( |delete { iv_remote_path }| ).
-  ENDMETHOD.
-
-  METHOD zif_shk_ftp~file_exists.
-    IF mv_connected = abap_false.
-      RAISE EXCEPTION TYPE zcx_shk_ftp
-        EXPORTING iv_text = 'Not connected'.
-    ENDIF.
-
-    TYPES ty_line(1024) TYPE c.
-    DATA lt_result TYPE STANDARD TABLE OF ty_line.
-
-    CALL FUNCTION 'FTP_COMMAND'
-      EXPORTING
-        handle        = mv_handle
-        command       = CONV char200( |ls { iv_remote_path }| )
-      TABLES
-        data          = lt_result
-      EXCEPTIONS
-        tcpip_error   = 1
-        command_error = 2
-        data_error    = 3
-        OTHERS        = 4.
-
-    rv_exists = xsdbool( sy-subrc = 0 AND lt_result IS NOT INITIAL ).
-  ENDMETHOD.
-
-  METHOD zif_shk_ftp~is_connected.
-    rv_connected = mv_connected.
   ENDMETHOD.
 ENDCLASS.
