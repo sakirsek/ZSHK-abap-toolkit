@@ -8,6 +8,7 @@ CLASS ltc_parse_listing DEFINITION FINAL
     METHODS windows_iis_listing FOR TESTING.
     METHODS plain_names_and_paths FOR TESTING.
     METHODS reply_lines_skipped FOR TESTING.
+    METHODS sapftp_echo_and_notes_skipped FOR TESTING.
     METHODS mask_is_case_insensitive FOR TESTING.
 
 ENDCLASS.
@@ -69,6 +70,17 @@ CLASS ltc_parse_listing IMPLEMENTATION.
       ( `226 Transfer complete.` ) ) ).
     cl_abap_unit_assert=>assert_equals( act = lines( lt_files ) exp = 1 ).
     cl_abap_unit_assert=>assert_equals( act = lt_files[ 1 ]-name exp = `x.edi` ).
+  ENDMETHOD.
+
+  METHOD sapftp_echo_and_notes_skipped.
+    DATA(lt_files) = zcl_shk_ftp=>parse_listing( VALUE #(
+      ( `dir .` )
+      ( `227 Entering Passive Mode (10,249,33,61,232,205)` )
+      ( `Passive mode: Connected to Port -5939.` )
+      ( `150 Starting data transfer.` )
+      ( `drwxrwxrwx 1 ftp ftp 0 Oct 01 14:20 Archive` )
+      ( `226 Operation successful` ) ) ).
+    cl_abap_unit_assert=>assert_initial( lt_files ).
   ENDMETHOD.
 
   METHOD mask_is_case_insensitive.

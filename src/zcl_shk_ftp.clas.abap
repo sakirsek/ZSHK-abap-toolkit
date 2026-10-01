@@ -103,9 +103,13 @@ CLASS ZCL_SHK_FTP IMPLEMENTATION.
           IF to_upper( lv_size ) = `<DIR>`.
             CONTINUE.
           ENDIF.
-        ELSE.
+        ELSEIF matches( val = lv_line regex = `\S+` ).
+          " a bare name (NLST) has no blanks; SAPFTP's command echo ('dir .')
+          " and client notes ('Passive mode: Connected to Port ...') do
           SPLIT lv_line AT `/` INTO TABLE DATA(lt_parts).
           ls_file-name = VALUE #( lt_parts[ lines( lt_parts ) ] OPTIONAL ).
+        ELSE.
+          CONTINUE.
         ENDIF.
       ENDIF.
 
