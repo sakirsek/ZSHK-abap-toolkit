@@ -11,6 +11,12 @@ CLASS zcl_shk_job DEFINITION
     DATA mv_jobcount TYPE btcjobcnt.
     DATA mt_steps    TYPE STANDARD TABLE OF zif_shk_job=>ty_s_step WITH EMPTY KEY.
     DATA ms_schedule TYPE zif_shk_job=>ty_s_schedule.
+
+    METHODS submit_with_params
+      IMPORTING
+        is_step TYPE zif_shk_job=>ty_s_step
+      RAISING
+        zcx_shk_job.
 ENDCLASS.
 
 CLASS zcl_shk_job IMPLEMENTATION.
@@ -22,7 +28,8 @@ CLASS zcl_shk_job IMPLEMENTATION.
   METHOD zif_shk_job~add_step.
     APPEND VALUE zif_shk_job=>ty_s_step(
       program = iv_program
-      variant = iv_variant ) TO mt_steps.
+      variant = iv_variant
+      params  = it_params ) TO mt_steps.
     ro_self = me.
   ENDMETHOD.
 
@@ -40,6 +47,11 @@ CLASS zcl_shk_job IMPLEMENTATION.
     ro_self = me.
   ENDMETHOD.
 
+  METHOD zif_shk_job~set_period.
+    ms_schedule-period_min = iv_minutes.
+    ro_self = me.
+  ENDMETHOD.
+
   METHOD zif_shk_job~submit.
     IF mv_name IS INITIAL.
       RAISE EXCEPTION TYPE zcx_shk_job
@@ -49,6 +61,11 @@ CLASS zcl_shk_job IMPLEMENTATION.
     IF mt_steps IS INITIAL.
       RAISE EXCEPTION TYPE zcx_shk_job
         EXPORTING iv_text = 'At least one step is required'.
+    ENDIF.
+
+    IF ms_schedule-period_min < 0 OR ms_schedule-period_min > 5999.
+      RAISE EXCEPTION TYPE zcx_shk_job
+        EXPORTING iv_text = 'Period must be between 0 and 5999 minutes'.
     ENDIF.
 
     CALL FUNCTION 'JOB_OPEN'
@@ -68,6 +85,11 @@ CLASS zcl_shk_job IMPLEMENTATION.
     ENDIF.
 
     LOOP AT mt_steps INTO DATA(ls_step).
+      IF ls_step-params IS NOT INITIAL.
+        submit_with_params( ls_step ).
+        CONTINUE.
+      ENDIF.
+
       DATA lv_number TYPE btcstepcnt.
 
       CALL FUNCTION 'JOB_SUBMIT'
@@ -98,6 +120,11 @@ CLASS zcl_shk_job IMPLEMENTATION.
 
     DATA lv_start_date TYPE sy-datum.
     DATA lv_start_time TYPE sy-uzeit.
+    DATA lv_prdhours TYPE btcphour.
+    DATA lv_prdmins TYPE btcpmin.
+
+    lv_prdhours = ms_schedule-period_min DIV 60.
+    lv_prdmins  = ms_schedule-period_min MOD 60.
 
     IF ms_schedule-immediate = abap_true.
       CALL FUNCTION 'JOB_CLOSE'
@@ -105,6 +132,8 @@ CLASS zcl_shk_job IMPLEMENTATION.
           jobcount             = mv_jobcount
           jobname              = mv_name
           strtimmed            = abap_true
+          prdhours             = lv_prdhours
+          prdmins              = lv_prdmins
         EXCEPTIONS
           cant_start_immediate = 1
           invalid_startdate    = 2
@@ -125,6 +154,8 @@ CLASS zcl_shk_job IMPLEMENTATION.
           jobname              = mv_name
           sdlstrtdt            = lv_start_date
           sdlstrttm            = lv_start_time
+          prdhours             = lv_prdhours
+          prdmins              = lv_prdmins
         EXCEPTIONS
           cant_start_immediate = 1
           invalid_startdate    = 2
@@ -166,5 +197,34 @@ CLASS zcl_shk_job IMPLEMENTATION.
         OTHERS            = 1.
 
     rv_running = xsdbool( lt_joblist IS NOT INITIAL ).
+  ENDMETHOD.
+
+  METHOD zif_shk_job~is_scheduled.
+    " S released, Z released/suspended, Y ready, R active
+    SELECT SINGLE jobcount FROM tbtco
+      WHERE jobname = @iv_name
+        AND status IN ('S','Z','Y','R')
+      INTO @DATA(lv_jobcount).
+    rv_scheduled = xsdbool( sy-subrc = 0 ).
+  ENDMETHOD.
+
+  METHOD submit_with_params.
+    IF is_step-variant IS INITIAL.
+      SUBMIT (is_step-program)
+        WITH SELECTION-TABLE is_step-params
+        VIA JOB mv_name NUMBER mv_jobcount
+        AND RETURN.
+    ELSE.
+      SUBMIT (is_step-program)
+        USING SELECTION-SET is_step-variant
+        WITH SELECTION-TABLE is_step-params
+        VIA JOB mv_name NUMBER mv_jobcount
+        AND RETURN.
+    ENDIF.
+
+    IF sy-subrc <> 0.
+      RAISE EXCEPTION TYPE zcx_shk_job
+        EXPORTING iv_text = |SUBMIT VIA JOB failed for { is_step-program } (sy-subrc { sy-subrc })|.
+    ENDIF.
   ENDMETHOD.
 ENDCLASS.

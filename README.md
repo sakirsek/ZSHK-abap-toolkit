@@ -24,7 +24,7 @@ That's it — all 10 modules are ready to use. No configuration required.
 | **Mail** | `ZCL_SHK_MAIL` | HTML emails with attachments, inline tables, CC/BCC via CL_BCS |
 | **FTP** | `ZCL_SHK_FTP` | FTP client — upload, download, rename, delete, directory navigation, parsed file listing with mask |
 | **HTTP** | `ZCL_SHK_HTTP` | REST client — GET/POST/PUT/DELETE with auth and custom headers |
-| **Job** | `ZCL_SHK_JOB` | Background job scheduling with singleton lock check |
+| **Job** | `ZCL_SHK_JOB` | Background job scheduling — variant or parameter steps, periodic jobs, running/scheduled checks |
 | **Date** | `ZCL_SHK_DATE` | Factory calendar — workday checks, date arithmetic, period helpers, ms-precision timestamps |
 | **Progress** | `ZCL_SHK_PROGRESS` | Progress indicator with ETA estimation |
 | **Return** | `ZCL_SHK_RETURN` | BAPIRET2 message factory — create, collect, and check return messages |
@@ -111,6 +111,23 @@ lo_job->zif_shk_job~set_name( 'ZREPORT_DAILY' ).
 lo_job->zif_shk_job~add_step( iv_program = 'ZREPORT' iv_variant = 'V01' ).
 lo_job->zif_shk_job~schedule_immediate( ).
 lo_job->zif_shk_job~submit( ).
+
+" Selection-screen values instead of a variant (SUBMIT ... VIA JOB)
+lo_job->zif_shk_job~set_name( 'ZWORKER_A' ).
+lo_job->zif_shk_job~add_step(
+  iv_program = 'ZWORKER'
+  it_params  = VALUE #( ( selname = 'P_KEY' kind = 'P' sign = 'I' option = 'EQ' low = 'A' ) ) ).
+lo_job->zif_shk_job~schedule_immediate( ).
+lo_job->zif_shk_job~submit( ).
+
+" Periodic job, every 5 minutes; skip if one is already released/ready/running
+IF lo_job->zif_shk_job~is_scheduled( 'ZDISPATCH' ) = abap_false.
+  lo_job->zif_shk_job~set_name( 'ZDISPATCH' ).
+  lo_job->zif_shk_job~add_step( iv_program = 'ZDISPATCH' ).
+  lo_job->zif_shk_job~schedule_at( iv_date = sy-datum iv_time = sy-uzeit + 60 ).
+  lo_job->zif_shk_job~set_period( 5 ).
+  lo_job->zif_shk_job~submit( ).
+ENDIF.
 ```
 
 ### Date

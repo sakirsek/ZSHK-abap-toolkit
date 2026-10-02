@@ -4,12 +4,14 @@ INTERFACE zif_shk_job PUBLIC.
     BEGIN OF ty_s_step,
       program  TYPE sy-repid,
       variant  TYPE raldb_vari,
+      params   TYPE rsparams_tt,
     END OF ty_s_step,
 
     BEGIN OF ty_s_schedule,
       immediate  TYPE abap_bool,
       start_date TYPE sy-datum,
       start_time TYPE sy-uzeit,
+      period_min TYPE i,
     END OF ty_s_schedule.
 
   METHODS set_name
@@ -22,6 +24,7 @@ INTERFACE zif_shk_job PUBLIC.
     IMPORTING
       iv_program TYPE sy-repid
       iv_variant TYPE raldb_vari OPTIONAL
+      it_params  TYPE rsparams_tt OPTIONAL
     RETURNING
       VALUE(ro_self) TYPE REF TO zif_shk_job.
 
@@ -36,6 +39,12 @@ INTERFACE zif_shk_job PUBLIC.
     RETURNING
       VALUE(ro_self) TYPE REF TO zif_shk_job.
 
+  METHODS set_period
+    IMPORTING
+      iv_minutes TYPE i
+    RETURNING
+      VALUE(ro_self) TYPE REF TO zif_shk_job.
+
   METHODS submit
     RETURNING
       VALUE(rv_jobcount) TYPE btcjobcnt
@@ -47,5 +56,11 @@ INTERFACE zif_shk_job PUBLIC.
       iv_name          TYPE btcjob
     RETURNING
       VALUE(rv_running) TYPE abap_bool.
+
+  METHODS is_scheduled
+    IMPORTING
+      iv_name             TYPE btcjob
+    RETURNING
+      VALUE(rv_scheduled) TYPE abap_bool.
 
 ENDINTERFACE.
