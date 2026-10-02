@@ -63,4 +63,12 @@ INTERFACE zif_shk_job PUBLIC.
     RETURNING
       VALUE(rv_scheduled) TYPE abap_bool.
 
+  METHODS delete_scheduled
+    IMPORTING
+      iv_name           TYPE btcjob
+    RETURNING
+      VALUE(rv_deleted) TYPE i
+    RAISING
+      zcx_shk_job.
+
 ENDINTERFACE.

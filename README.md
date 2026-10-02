@@ -24,7 +24,7 @@ That's it — all 10 modules are ready to use. No configuration required.
 | **Mail** | `ZCL_SHK_MAIL` | HTML emails with attachments, inline tables, CC/BCC via CL_BCS |
 | **FTP** | `ZCL_SHK_FTP` | FTP client — upload, download, rename, delete, directory navigation, parsed file listing with mask |
 | **HTTP** | `ZCL_SHK_HTTP` | REST client — GET/POST/PUT/DELETE with auth and custom headers |
-| **Job** | `ZCL_SHK_JOB` | Background job scheduling — variant or parameter steps, periodic jobs, running/scheduled checks |
+| **Job** | `ZCL_SHK_JOB` | Background job scheduling — variant or parameter steps, periodic jobs, running/scheduled checks, delete scheduled instances |
 | **Date** | `ZCL_SHK_DATE` | Factory calendar — workday checks, date arithmetic, period helpers, ms-precision timestamps |
 | **Progress** | `ZCL_SHK_PROGRESS` | Progress indicator with ETA estimation |
 | **Return** | `ZCL_SHK_RETURN` | BAPIRET2 message factory — create, collect, and check return messages |
@@ -128,6 +128,9 @@ IF lo_job->zif_shk_job~is_scheduled( 'ZDISPATCH' ) = abap_false.
   lo_job->zif_shk_job~set_period( 5 ).
   lo_job->zif_shk_job~submit( ).
 ENDIF.
+
+" Stop it again: deletes scheduled/released instances, leaves a running one alone
+DATA(lv_deleted) = lo_job->zif_shk_job~delete_scheduled( 'ZDISPATCH' ).
 ```
 
 ### Date

@@ -13,6 +13,7 @@ PARAMETERS p_selnm TYPE rsparams-selname.
 PARAMETERS p_selvl TYPE rsparams-low.
 PARAMETERS p_run  TYPE abap_bool AS CHECKBOX.
 PARAMETERS p_chk  TYPE abap_bool AS CHECKBOX DEFAULT 'X'.
+PARAMETERS p_del  TYPE abap_bool AS CHECKBOX.
 
 START-OF-SELECTION.
 
@@ -25,6 +26,17 @@ START-OF-SELECTION.
     WRITE: / |Job "{ p_name }" running: { lv_running }|.
     WRITE: / |Job "{ p_name }" released/ready/running: { lv_scheduled }|.
     ULINE.
+  ENDIF.
+
+  " delete_scheduled — removes released/scheduled instances (e.g. a periodic job)
+  IF p_del = abap_true.
+    TRY.
+        DATA(lv_deleted) = lo_job->zif_shk_job~delete_scheduled( p_name ).
+        WRITE: / |Deleted { lv_deleted } scheduled instance(s) of "{ p_name }"|.
+      CATCH zcx_shk_job INTO DATA(lo_del_err).
+        WRITE: / 'Delete error:', lo_del_err->get_text( ).
+    ENDTRY.
+    RETURN.
   ENDIF.
 
   IF p_run = abap_false.

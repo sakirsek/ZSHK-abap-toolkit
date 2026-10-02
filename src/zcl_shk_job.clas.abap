@@ -208,6 +208,46 @@ CLASS zcl_shk_job IMPLEMENTATION.
     rv_scheduled = xsdbool( sy-subrc = 0 ).
   ENDMETHOD.
 
+  METHOD zif_shk_job~delete_scheduled.
+    " P scheduled, S released, Z released/suspended; ready and active jobs are left alone
+    SELECT jobcount FROM tbtco
+      WHERE jobname = @iv_name
+        AND status IN ('P','S','Z')
+      INTO TABLE @DATA(lt_jobs).
+
+    LOOP AT lt_jobs INTO DATA(ls_job).
+      CALL FUNCTION 'BP_JOB_DELETE'
+        EXPORTING
+          jobcount                 = ls_job-jobcount
+          jobname                  = iv_name
+        EXCEPTIONS
+          cant_delete_event_entry  = 1
+          cant_delete_job          = 2
+          cant_delete_joblog       = 3
+          cant_delete_steps        = 4
+          cant_delete_time_entry   = 5
+          cant_derelease_successor = 6
+          cant_enq_predecessor     = 7
+          cant_enq_successor       = 8
+          cant_enq_tbtco_entry     = 9
+          cant_update_predecessor  = 10
+          cant_update_successor    = 11
+          commit_failed            = 12
+          jobcount_missing         = 13
+          jobname_missing          = 14
+          job_does_not_exist       = 15
+          job_is_already_running   = 16
+          no_delete_authority      = 17
+          OTHERS                   = 18.
+
+      IF sy-subrc <> 0.
+        RAISE EXCEPTION TYPE zcx_shk_job
+          EXPORTING iv_text = |BP_JOB_DELETE failed for { iv_name } { ls_job-jobcount } (sy-subrc { sy-subrc })|.
+      ENDIF.
+      rv_deleted = rv_deleted + 1.
+    ENDLOOP.
+  ENDMETHOD.
+
   METHOD submit_with_params.
     IF is_step-variant IS INITIAL.
       SUBMIT (is_step-program)
