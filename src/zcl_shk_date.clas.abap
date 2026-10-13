@@ -79,52 +79,23 @@ CLASS zcl_shk_date DEFINITION
   PRIVATE SECTION.
 ENDCLASS.
 
-CLASS zcl_shk_date IMPLEMENTATION.
-  METHOD is_workday.
-    CALL FUNCTION 'DATE_CHECK_WORKINGDAY'
-      EXPORTING
-        date                       = iv_date
-        factory_calendar_id        = iv_factory_cal_id
-        message_type               = 'E'
-      EXCEPTIONS
-        date_after_range           = 1
-        date_before_range          = 2
-        date_invalid               = 3
-        date_no_workingday         = 4
-        factory_calendar_not_found = 5
-        message_type_invalid       = 6
-        OTHERS                     = 7.
 
-    rv_result = xsdbool( sy-subrc = 0 ).
+
+CLASS ZCL_SHK_DATE IMPLEMENTATION.
+
+
+  METHOD add_timestamp_suffix.
+    DATA(lv_suffix) = |_{ get_timestamp_ms( iv_tzone ) }|.
+
+    DATA(lv_dot) = find( val = iv_filename sub = '.' occ = -1 ).
+    IF lv_dot > 0.
+      rv_filename = substring( val = iv_filename len = lv_dot ) && lv_suffix &&
+                    substring( val = iv_filename off = lv_dot ).
+    ELSE.
+      rv_filename = iv_filename && lv_suffix.
+    ENDIF.
   ENDMETHOD.
 
-  METHOD get_next_workday.
-    rv_date = iv_date + 1.
-
-    CALL FUNCTION 'BKK_ADD_WORKINGDAY'
-      EXPORTING
-        i_date       = iv_date
-        i_days       = 1
-        i_calendar1  = iv_factory_cal_id
-      IMPORTING
-        e_date       = rv_date
-      EXCEPTIONS
-        OTHERS       = 1.
-  ENDMETHOD.
-
-  METHOD get_prev_workday.
-    rv_date = iv_date - 1.
-
-    CALL FUNCTION 'BKK_ADD_WORKINGDAY'
-      EXPORTING
-        i_date       = iv_date
-        i_days       = -1
-        i_calendar1  = iv_factory_cal_id
-      IMPORTING
-        e_date       = rv_date
-      EXCEPTIONS
-        OTHERS       = 1.
-  ENDMETHOD.
 
   METHOD add_workdays.
     rv_date = iv_date.
@@ -140,10 +111,12 @@ CLASS zcl_shk_date IMPLEMENTATION.
         OTHERS       = 1.
   ENDMETHOD.
 
+
   METHOD get_month_first.
     rv_date = iv_date.
     rv_date+6(2) = '01'.
   ENDMETHOD.
+
 
   METHOD get_month_last.
     CALL FUNCTION 'RP_LAST_DAY_OF_MONTHS'
@@ -159,9 +132,59 @@ CLASS zcl_shk_date IMPLEMENTATION.
     ENDIF.
   ENDMETHOD.
 
+
+  METHOD get_next_workday.
+    rv_date = iv_date + 1.
+
+    CALL FUNCTION 'BKK_ADD_WORKINGDAY'
+      EXPORTING
+        i_date       = iv_date
+        i_days       = 1
+        i_calendar1  = iv_factory_cal_id
+      IMPORTING
+        e_date       = rv_date
+      EXCEPTIONS
+        OTHERS       = 1.
+  ENDMETHOD.
+
+
   METHOD get_period.
     rv_period = iv_date+0(4) && iv_date+4(2).
   ENDMETHOD.
+
+
+  METHOD get_prev_workday.
+    rv_date = iv_date - 1.
+
+    CALL FUNCTION 'BKK_ADD_WORKINGDAY'
+      EXPORTING
+        i_date       = iv_date
+        i_days       = -1
+        i_calendar1  = iv_factory_cal_id
+      IMPORTING
+        e_date       = rv_date
+      EXCEPTIONS
+        OTHERS       = 1.
+  ENDMETHOD.
+
+
+  METHOD get_timestamp_ms.
+    DATA lv_ts TYPE timestampl.
+
+    GET TIME STAMP FIELD lv_ts.
+    DATA(lv_msec) = CONV i( trunc( frac( lv_ts ) * 1000 ) ).
+
+    CONVERT TIME STAMP lv_ts TIME ZONE iv_tzone
+            INTO DATE DATA(lv_date) TIME DATA(lv_time).
+    IF sy-subrc <> 0.
+      " Zaman dilimi çözülemezse sistem tarih/saatine düş (ms korunur)
+      lv_date = sy-datum.
+      lv_time = sy-uzeit.
+    ENDIF.
+
+    rv_timestamp = |{ lv_date }{ lv_time }{ lv_msec WIDTH = 3 ALIGN = RIGHT PAD = '0' }|.
+  ENDMETHOD.
+
 
   METHOD get_workdays_between.
     DATA lt_dats TYPE STANDARD TABLE OF rke_dat.
@@ -182,32 +205,22 @@ CLASS zcl_shk_date IMPLEMENTATION.
     ENDIF.
   ENDMETHOD.
 
-  METHOD get_timestamp_ms.
-    DATA lv_ts TYPE timestampl.
 
-    GET TIME STAMP FIELD lv_ts.
-    DATA(lv_msec) = CONV i( trunc( frac( lv_ts ) * 1000 ) ).
+  METHOD is_workday.
+    CALL FUNCTION 'DATE_CHECK_WORKINGDAY'
+      EXPORTING
+        date                       = iv_date
+        factory_calendar_id        = iv_factory_cal_id
+        message_type               = 'E'
+      EXCEPTIONS
+        date_after_range           = 1
+        date_before_range          = 2
+        date_invalid               = 3
+        date_no_workingday         = 4
+        factory_calendar_not_found = 5
+        message_type_invalid       = 6
+        OTHERS                     = 7.
 
-    CONVERT TIME STAMP lv_ts TIME ZONE iv_tzone
-            INTO DATE DATA(lv_date) TIME DATA(lv_time).
-    IF sy-subrc <> 0.
-      " Zaman dilimi çözülemezse sistem tarih/saatine düş (ms korunur)
-      lv_date = sy-datum.
-      lv_time = sy-uzeit.
-    ENDIF.
-
-    rv_timestamp = |{ lv_date }{ lv_time }{ lv_msec WIDTH = 3 ALIGN = RIGHT PAD = '0' }|.
-  ENDMETHOD.
-
-  METHOD add_timestamp_suffix.
-    DATA(lv_suffix) = |_{ get_timestamp_ms( iv_tzone ) }|.
-
-    DATA(lv_dot) = find( val = iv_filename sub = '.' occ = -1 ).
-    IF lv_dot > 0.
-      rv_filename = substring( val = iv_filename len = lv_dot ) && lv_suffix &&
-                    substring( val = iv_filename off = lv_dot ).
-    ELSE.
-      rv_filename = iv_filename && lv_suffix.
-    ENDIF.
+    rv_result = xsdbool( sy-subrc = 0 ).
   ENDMETHOD.
 ENDCLASS.

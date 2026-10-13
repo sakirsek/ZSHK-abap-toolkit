@@ -25,7 +25,11 @@ CLASS zcl_shk_log_gui DEFINITION
   PRIVATE SECTION.
 ENDCLASS.
 
-CLASS zcl_shk_log_gui IMPLEMENTATION.
+
+
+CLASS ZCL_SHK_LOG_GUI IMPLEMENTATION.
+
+
   METHOD show_by_handle.
     DATA lt_handles TYPE bal_t_logh.
     APPEND iv_log_handle TO lt_handles.
@@ -60,6 +64,13 @@ CLASS zcl_shk_log_gui IMPLEMENTATION.
         EXPORTING iv_text = |BAL_DSP_LOG_DISPLAY failed: { sy-msgv1 }|.
     ENDIF.
   ENDMETHOD.
+
+
+  METHOD show_by_log.
+    DATA(lv_handle) = io_log->save( ).
+    show_by_handle( lv_handle ).
+  ENDMETHOD.
+
 
   METHOD show_by_messages.
     DATA ls_msg TYPE bal_s_msg.
@@ -120,10 +131,5 @@ CLASS zcl_shk_log_gui IMPLEMENTATION.
         i_t_log_handle      = lt_handles
       EXCEPTIONS
         OTHERS              = 1.
-  ENDMETHOD.
-
-  METHOD show_by_log.
-    DATA(lv_handle) = io_log->save( ).
-    show_by_handle( lv_handle ).
   ENDMETHOD.
 ENDCLASS.

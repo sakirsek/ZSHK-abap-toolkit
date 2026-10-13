@@ -31,47 +31,10 @@ CLASS zcl_shk_csv DEFINITION
   PRIVATE SECTION.
 ENDCLASS.
 
-CLASS zcl_shk_csv IMPLEMENTATION.
-  METHOD table_to_csv.
-    FIELD-SYMBOLS <ls_row> TYPE any.
-    FIELD-SYMBOLS <lv_field> TYPE any.
 
-    DATA lo_table TYPE REF TO cl_abap_tabledescr.
-    lo_table ?= cl_abap_typedescr=>describe_by_data( it_table ).
-    DATA lo_struct TYPE REF TO cl_abap_structdescr.
-    lo_struct ?= lo_table->get_table_line_type( ).
-    DATA(lt_components) = lo_struct->get_components( ).
 
-    IF iv_with_header = abap_true.
-      DATA lv_header TYPE string.
-      LOOP AT lt_components INTO DATA(ls_comp_h).
-        IF lv_header IS INITIAL.
-          lv_header = ls_comp_h-name.
-        ELSE.
-          lv_header = lv_header && iv_separator && ls_comp_h-name.
-        ENDIF.
-      ENDLOOP.
-      rv_csv = lv_header && cl_abap_char_utilities=>cr_lf.
-    ENDIF.
+CLASS ZCL_SHK_CSV IMPLEMENTATION.
 
-    LOOP AT it_table ASSIGNING <ls_row>.
-      DATA lv_line TYPE string.
-      CLEAR lv_line.
-      LOOP AT lt_components INTO DATA(ls_comp).
-        ASSIGN COMPONENT ls_comp-name OF STRUCTURE <ls_row> TO <lv_field>.
-        IF sy-subrc = 0.
-          DATA lv_val TYPE string.
-          lv_val = condense( CONV string( <lv_field> ) ).
-          IF lv_line IS INITIAL.
-            lv_line = lv_val.
-          ELSE.
-            lv_line = lv_line && iv_separator && lv_val.
-          ENDIF.
-        ENDIF.
-      ENDLOOP.
-      rv_csv = rv_csv && lv_line && cl_abap_char_utilities=>cr_lf.
-    ENDLOOP.
-  ENDMETHOD.
 
   METHOD csv_to_table.
     DATA lt_lines TYPE string_table.
@@ -117,6 +80,49 @@ CLASS zcl_shk_csv IMPLEMENTATION.
       ENDLOOP.
     ENDLOOP.
   ENDMETHOD.
+
+
+  METHOD table_to_csv.
+    FIELD-SYMBOLS <ls_row> TYPE any.
+    FIELD-SYMBOLS <lv_field> TYPE any.
+
+    DATA lo_table TYPE REF TO cl_abap_tabledescr.
+    lo_table ?= cl_abap_typedescr=>describe_by_data( it_table ).
+    DATA lo_struct TYPE REF TO cl_abap_structdescr.
+    lo_struct ?= lo_table->get_table_line_type( ).
+    DATA(lt_components) = lo_struct->get_components( ).
+
+    IF iv_with_header = abap_true.
+      DATA lv_header TYPE string.
+      LOOP AT lt_components INTO DATA(ls_comp_h).
+        IF lv_header IS INITIAL.
+          lv_header = ls_comp_h-name.
+        ELSE.
+          lv_header = lv_header && iv_separator && ls_comp_h-name.
+        ENDIF.
+      ENDLOOP.
+      rv_csv = lv_header && cl_abap_char_utilities=>cr_lf.
+    ENDIF.
+
+    LOOP AT it_table ASSIGNING <ls_row>.
+      DATA lv_line TYPE string.
+      CLEAR lv_line.
+      LOOP AT lt_components INTO DATA(ls_comp).
+        ASSIGN COMPONENT ls_comp-name OF STRUCTURE <ls_row> TO <lv_field>.
+        IF sy-subrc = 0.
+          DATA lv_val TYPE string.
+          lv_val = condense( CONV string( <lv_field> ) ).
+          IF lv_line IS INITIAL.
+            lv_line = lv_val.
+          ELSE.
+            lv_line = lv_line && iv_separator && lv_val.
+          ENDIF.
+        ENDIF.
+      ENDLOOP.
+      rv_csv = rv_csv && lv_line && cl_abap_char_utilities=>cr_lf.
+    ENDLOOP.
+  ENDMETHOD.
+
 
   METHOD to_xstring.
     DATA lo_conv TYPE REF TO cl_abap_conv_out_ce.

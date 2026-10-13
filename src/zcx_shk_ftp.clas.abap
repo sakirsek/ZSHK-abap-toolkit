@@ -28,7 +28,11 @@ CLASS zcx_shk_ftp DEFINITION
   PRIVATE SECTION.
 ENDCLASS.
 
-CLASS zcx_shk_ftp IMPLEMENTATION.
+
+
+CLASS ZCX_SHK_FTP IMPLEMENTATION.
+
+
   METHOD constructor ##ADT_SUPPRESS_GENERATION.
     super->constructor( previous = previous ).
     mv_text = iv_text.

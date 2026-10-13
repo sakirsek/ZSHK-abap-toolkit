@@ -10,14 +10,10 @@ CLASS zcl_shk_bdc DEFINITION
     DATA mt_bdcdata TYPE tab_bdcdata.
 ENDCLASS.
 
-CLASS zcl_shk_bdc IMPLEMENTATION.
-  METHOD zif_shk_bdc~add_screen.
-    DATA ls_bdc TYPE bdcdata.
-    ls_bdc-program  = iv_program.
-    ls_bdc-dynpro   = iv_dynpro.
-    ls_bdc-dynbegin = abap_true.
-    APPEND ls_bdc TO mt_bdcdata.
-  ENDMETHOD.
+
+
+CLASS ZCL_SHK_BDC IMPLEMENTATION.
+
 
   METHOD zif_shk_bdc~add_field.
     DATA ls_bdc TYPE bdcdata.
@@ -26,12 +22,28 @@ CLASS zcl_shk_bdc IMPLEMENTATION.
     APPEND ls_bdc TO mt_bdcdata.
   ENDMETHOD.
 
+
   METHOD zif_shk_bdc~add_okcode.
     DATA ls_bdc TYPE bdcdata.
     ls_bdc-fnam = 'BDC_OKCODE'.
     ls_bdc-fval = iv_okcode.
     APPEND ls_bdc TO mt_bdcdata.
   ENDMETHOD.
+
+
+  METHOD zif_shk_bdc~add_screen.
+    DATA ls_bdc TYPE bdcdata.
+    ls_bdc-program  = iv_program.
+    ls_bdc-dynpro   = iv_dynpro.
+    ls_bdc-dynbegin = abap_true.
+    APPEND ls_bdc TO mt_bdcdata.
+  ENDMETHOD.
+
+
+  METHOD zif_shk_bdc~clear.
+    CLEAR mt_bdcdata.
+  ENDMETHOD.
+
 
   METHOD zif_shk_bdc~execute.
     IF mt_bdcdata IS INITIAL.
@@ -72,11 +84,8 @@ CLASS zcl_shk_bdc IMPLEMENTATION.
     zif_shk_bdc~clear( ).
   ENDMETHOD.
 
+
   METHOD zif_shk_bdc~get_bdcdata.
     rt_bdcdata = mt_bdcdata.
-  ENDMETHOD.
-
-  METHOD zif_shk_bdc~clear.
-    CLEAR mt_bdcdata.
   ENDMETHOD.
 ENDCLASS.

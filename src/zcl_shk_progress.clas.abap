@@ -37,7 +37,11 @@ CLASS zcl_shk_progress DEFINITION
     METHODS show.
 ENDCLASS.
 
-CLASS zcl_shk_progress IMPLEMENTATION.
+
+
+CLASS ZCL_SHK_PROGRESS IMPLEMENTATION.
+
+
   METHOD constructor.
     mv_total   = iv_total.
     mv_current = 0.
@@ -45,29 +49,6 @@ CLASS zcl_shk_progress IMPLEMENTATION.
     GET TIME STAMP FIELD mv_start_ts.
   ENDMETHOD.
 
-  METHOD update.
-    IF iv_current IS SUPPLIED.
-      mv_current = iv_current.
-    ENDIF.
-    IF iv_text IS SUPPLIED AND iv_text IS NOT INITIAL.
-      mv_text = iv_text.
-    ENDIF.
-    show( ).
-  ENDMETHOD.
-
-  METHOD increment.
-    mv_current = mv_current + 1.
-    IF iv_text IS SUPPLIED AND iv_text IS NOT INITIAL.
-      mv_text = iv_text.
-    ENDIF.
-    show( ).
-  ENDMETHOD.
-
-  METHOD get_percentage.
-    IF mv_total > 0.
-      rv_pct = mv_current * 100 / mv_total.
-    ENDIF.
-  ENDMETHOD.
 
   METHOD get_elapsed.
     DATA lv_now TYPE timestampl.
@@ -77,12 +58,30 @@ CLASS zcl_shk_progress IMPLEMENTATION.
       tstmp2 = mv_start_ts ).
   ENDMETHOD.
 
+
   METHOD get_eta.
     DATA(lv_elapsed) = get_elapsed( ).
     IF mv_current > 0 AND mv_current < mv_total.
       rv_seconds = lv_elapsed * ( mv_total - mv_current ) / mv_current.
     ENDIF.
   ENDMETHOD.
+
+
+  METHOD get_percentage.
+    IF mv_total > 0.
+      rv_pct = mv_current * 100 / mv_total.
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD increment.
+    mv_current = mv_current + 1.
+    IF iv_text IS SUPPLIED AND iv_text IS NOT INITIAL.
+      mv_text = iv_text.
+    ENDIF.
+    show( ).
+  ENDMETHOD.
+
 
   METHOD show.
     DATA(lv_pct) = get_percentage( ).
@@ -101,5 +100,16 @@ CLASS zcl_shk_progress IMPLEMENTATION.
       EXPORTING
         percentage = lv_pct
         text       = lv_display.
+  ENDMETHOD.
+
+
+  METHOD update.
+    IF iv_current IS SUPPLIED.
+      mv_current = iv_current.
+    ENDIF.
+    IF iv_text IS SUPPLIED AND iv_text IS NOT INITIAL.
+      mv_text = iv_text.
+    ENDIF.
+    show( ).
   ENDMETHOD.
 ENDCLASS.

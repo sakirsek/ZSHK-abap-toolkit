@@ -76,22 +76,10 @@ CLASS zcl_shk_return DEFINITION
         VALUE(rs_return) TYPE bapiret2.
 ENDCLASS.
 
-CLASS zcl_shk_return IMPLEMENTATION.
-  METHOD success.
-    rs_return = build( iv_type = 'S' iv_message = iv_message ).
-  ENDMETHOD.
 
-  METHOD error.
-    rs_return = build( iv_type = 'E' iv_message = iv_message ).
-  ENDMETHOD.
 
-  METHOD warning.
-    rs_return = build( iv_type = 'W' iv_message = iv_message ).
-  ENDMETHOD.
+CLASS ZCL_SHK_RETURN IMPLEMENTATION.
 
-  METHOD info.
-    rs_return = build( iv_type = 'I' iv_message = iv_message ).
-  ENDMETHOD.
 
   METHOD build.
     rs_return-type       = iv_type.
@@ -100,6 +88,29 @@ CLASS zcl_shk_return IMPLEMENTATION.
     rs_return-message    = iv_message.
     rs_return-message_v1 = iv_message.
   ENDMETHOD.
+
+
+  METHOD collect_errors.
+    LOOP AT it_return INTO DATA(ls_return)
+      WHERE type = 'E' OR type = 'A'.
+      APPEND ls_return TO rt_errors.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD error.
+    rs_return = build( iv_type = 'E' iv_message = iv_message ).
+  ENDMETHOD.
+
+
+  METHOD from_exception.
+    rs_return-type    = iv_type.
+    rs_return-id      = 'ZSHK_MSG'.
+    rs_return-number  = '001'.
+    rs_return-message = io_exception->get_text( ).
+    rs_return-message_v1 = rs_return-message.
+  ENDMETHOD.
+
 
   METHOD from_sy_msg.
     rs_return-type       = iv_type.
@@ -115,33 +126,22 @@ CLASS zcl_shk_return IMPLEMENTATION.
       INTO rs_return-message.
   ENDMETHOD.
 
-  METHOD from_exception.
-    rs_return-type    = iv_type.
-    rs_return-id      = 'ZSHK_MSG'.
-    rs_return-number  = '001'.
-    rs_return-message = io_exception->get_text( ).
-    rs_return-message_v1 = rs_return-message.
-  ENDMETHOD.
 
   METHOD has_errors.
     rv_result = xsdbool( line_exists( it_return[ type = 'E' ] )
                       OR line_exists( it_return[ type = 'A' ] ) ).
   ENDMETHOD.
 
-  METHOD collect_errors.
-    LOOP AT it_return INTO DATA(ls_return)
-      WHERE type = 'E' OR type = 'A'.
-      APPEND ls_return TO rt_errors.
-    ENDLOOP.
+
+  METHOD info.
+    rs_return = build( iv_type = 'I' iv_message = iv_message ).
   ENDMETHOD.
 
-  METHOD to_string.
-    IF is_return-message IS NOT INITIAL.
-      rv_text = is_return-message.
-    ELSE.
-      rv_text = |{ is_return-type }: { is_return-id }-{ is_return-number }|.
-    ENDIF.
+
+  METHOD success.
+    rs_return = build( iv_type = 'S' iv_message = iv_message ).
   ENDMETHOD.
+
 
   METHOD table_to_string.
     LOOP AT it_return INTO DATA(ls_return).
@@ -151,5 +151,19 @@ CLASS zcl_shk_return IMPLEMENTATION.
         rv_text = rv_text && iv_separator && to_string( ls_return ).
       ENDIF.
     ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD to_string.
+    IF is_return-message IS NOT INITIAL.
+      rv_text = is_return-message.
+    ELSE.
+      rv_text = |{ is_return-type }: { is_return-id }-{ is_return-number }|.
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD warning.
+    rs_return = build( iv_type = 'W' iv_message = iv_message ).
   ENDMETHOD.
 ENDCLASS.

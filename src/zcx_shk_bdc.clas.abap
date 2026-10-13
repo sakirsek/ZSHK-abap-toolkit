@@ -28,7 +28,11 @@ CLASS zcx_shk_bdc DEFINITION
   PRIVATE SECTION.
 ENDCLASS.
 
-CLASS zcx_shk_bdc IMPLEMENTATION.
+
+
+CLASS ZCX_SHK_BDC IMPLEMENTATION.
+
+
   METHOD constructor ##ADT_SUPPRESS_GENERATION.
     super->constructor( previous = previous ).
     mv_text = iv_text.

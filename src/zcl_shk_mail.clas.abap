@@ -34,116 +34,10 @@ CLASS zcl_shk_mail DEFINITION
         VALUE(rv_html)   TYPE string.
 ENDCLASS.
 
-CLASS zcl_shk_mail IMPLEMENTATION.
-  METHOD zif_shk_mail~set_subject.
-    mv_subject = iv_subject.
-    ro_self = me.
-  ENDMETHOD.
 
-  METHOD zif_shk_mail~set_body_text.
-    mv_body    = iv_body.
-    mv_is_html = abap_false.
-    ro_self = me.
-  ENDMETHOD.
 
-  METHOD zif_shk_mail~set_body_html.
-    mv_body    = iv_html.
-    mv_is_html = abap_true.
-    ro_self = me.
-  ENDMETHOD.
+CLASS ZCL_SHK_MAIL IMPLEMENTATION.
 
-  METHOD zif_shk_mail~add_table.
-    DATA(lv_table_html) = render_table_html(
-      it_table   = it_table
-      it_columns = it_columns
-      iv_title   = iv_title ).
-
-    IF mv_is_html = abap_true AND mv_body IS NOT INITIAL.
-      mv_body = mv_body && lv_table_html.
-    ELSE.
-      mv_body = lv_table_html.
-      mv_is_html = abap_true.
-    ENDIF.
-
-    ro_self = me.
-  ENDMETHOD.
-
-  METHOD zif_shk_mail~add_recipient.
-    APPEND VALUE ty_s_recipient( address = iv_address copy = iv_copy ) TO mt_recipients.
-    ro_self = me.
-  ENDMETHOD.
-
-  METHOD zif_shk_mail~add_attachment.
-    APPEND VALUE zif_shk_mail=>ty_s_attachment(
-      filename = iv_filename
-      content  = iv_content
-      mimetype = iv_mimetype ) TO mt_attachments.
-    ro_self = me.
-  ENDMETHOD.
-
-  METHOD zif_shk_mail~add_attachment_csv.
-    DATA lv_xstring TYPE xstring.
-    DATA lo_conv TYPE REF TO cl_abap_conv_out_ce.
-    lo_conv = cl_abap_conv_out_ce=>create( encoding = '4110' ).
-    lo_conv->convert( EXPORTING data = iv_csv IMPORTING buffer = lv_xstring ).
-
-    APPEND VALUE zif_shk_mail=>ty_s_attachment(
-      filename = iv_filename
-      content  = lv_xstring
-      mimetype = 'text/csv' ) TO mt_attachments.
-    ro_self = me.
-  ENDMETHOD.
-
-  METHOD zif_shk_mail~set_sender.
-    mv_sender = iv_address.
-    ro_self = me.
-  ENDMETHOD.
-
-  METHOD zif_shk_mail~set_importance.
-    mv_importance = iv_importance.
-    ro_self = me.
-  ENDMETHOD.
-
-  METHOD zif_shk_mail~send.
-    IF mt_recipients IS INITIAL.
-      RAISE EXCEPTION TYPE zcx_shk_mail
-        EXPORTING iv_text = 'No recipients specified'.
-    ENDIF.
-
-    TRY.
-        DATA(lo_bcs) = cl_bcs=>create_persistent( ).
-        DATA(lo_doc) = build_document( ).
-        lo_bcs->set_document( lo_doc ).
-
-        LOOP AT mt_recipients INTO DATA(ls_recip).
-          DATA(lo_recip) = cl_cam_address_bcs=>create_internet_address( ls_recip-address ).
-          IF ls_recip-copy = 'C'.
-            lo_bcs->add_recipient( i_recipient = lo_recip i_copy = abap_true ).
-          ELSEIF ls_recip-copy = 'B'.
-            lo_bcs->add_recipient( i_recipient = lo_recip i_blind_copy = abap_true ).
-          ELSE.
-            lo_bcs->add_recipient( lo_recip ).
-          ENDIF.
-        ENDLOOP.
-
-        IF mv_sender IS NOT INITIAL.
-          DATA(lo_sender) = cl_cam_address_bcs=>create_internet_address( mv_sender ).
-          lo_bcs->set_sender( lo_sender ).
-        ENDIF.
-
-        lo_bcs->set_send_immediately( abap_true ).
-        lo_bcs->send( ).
-
-        IF iv_commit = abap_true.
-          COMMIT WORK.
-        ENDIF.
-
-      CATCH cx_bcs INTO DATA(lo_bcs_error).
-        RAISE EXCEPTION TYPE zcx_shk_mail
-          EXPORTING iv_text  = lo_bcs_error->get_text( )
-                    previous = lo_bcs_error.
-    ENDTRY.
-  ENDMETHOD.
 
   METHOD build_document.
     TRY.
@@ -183,6 +77,7 @@ CLASS zcl_shk_mail IMPLEMENTATION.
                     previous = lo_error.
     ENDTRY.
   ENDMETHOD.
+
 
   METHOD render_table_html.
     FIELD-SYMBOLS <ls_row> TYPE any.
@@ -240,5 +135,125 @@ CLASS zcl_shk_mail IMPLEMENTATION.
     ENDLOOP.
 
     rv_html = rv_html && '</table><br>'.
+  ENDMETHOD.
+
+
+  METHOD zif_shk_mail~add_attachment.
+    APPEND VALUE zif_shk_mail=>ty_s_attachment(
+      filename = iv_filename
+      content  = iv_content
+      mimetype = iv_mimetype ) TO mt_attachments.
+    ro_self = me.
+  ENDMETHOD.
+
+
+  METHOD zif_shk_mail~add_attachment_csv.
+    DATA lv_xstring TYPE xstring.
+    DATA lo_conv TYPE REF TO cl_abap_conv_out_ce.
+    lo_conv = cl_abap_conv_out_ce=>create( encoding = '4110' ).
+    lo_conv->convert( EXPORTING data = iv_csv IMPORTING buffer = lv_xstring ).
+
+    APPEND VALUE zif_shk_mail=>ty_s_attachment(
+      filename = iv_filename
+      content  = lv_xstring
+      mimetype = 'text/csv' ) TO mt_attachments.
+    ro_self = me.
+  ENDMETHOD.
+
+
+  METHOD zif_shk_mail~add_recipient.
+    APPEND VALUE ty_s_recipient( address = iv_address copy = iv_copy ) TO mt_recipients.
+    ro_self = me.
+  ENDMETHOD.
+
+
+  METHOD zif_shk_mail~add_table.
+    DATA(lv_table_html) = render_table_html(
+      it_table   = it_table
+      it_columns = it_columns
+      iv_title   = iv_title ).
+
+    IF mv_is_html = abap_true AND mv_body IS NOT INITIAL.
+      mv_body = mv_body && lv_table_html.
+    ELSE.
+      mv_body = lv_table_html.
+      mv_is_html = abap_true.
+    ENDIF.
+
+    ro_self = me.
+  ENDMETHOD.
+
+
+  METHOD zif_shk_mail~send.
+    IF mt_recipients IS INITIAL.
+      RAISE EXCEPTION TYPE zcx_shk_mail
+        EXPORTING iv_text = 'No recipients specified'.
+    ENDIF.
+
+    TRY.
+        DATA(lo_bcs) = cl_bcs=>create_persistent( ).
+        DATA(lo_doc) = build_document( ).
+        lo_bcs->set_document( lo_doc ).
+
+        LOOP AT mt_recipients INTO DATA(ls_recip).
+          DATA(lo_recip) = cl_cam_address_bcs=>create_internet_address( ls_recip-address ).
+          IF ls_recip-copy = 'C'.
+            lo_bcs->add_recipient( i_recipient = lo_recip i_copy = abap_true ).
+          ELSEIF ls_recip-copy = 'B'.
+            lo_bcs->add_recipient( i_recipient = lo_recip i_blind_copy = abap_true ).
+          ELSE.
+            lo_bcs->add_recipient( lo_recip ).
+          ENDIF.
+        ENDLOOP.
+
+        IF mv_sender IS NOT INITIAL.
+          DATA(lo_sender) = cl_cam_address_bcs=>create_internet_address( mv_sender ).
+          lo_bcs->set_sender( lo_sender ).
+        ENDIF.
+
+        lo_bcs->set_send_immediately( abap_true ).
+        lo_bcs->send( ).
+
+        IF iv_commit = abap_true.
+          COMMIT WORK.
+        ENDIF.
+
+      CATCH cx_bcs INTO DATA(lo_bcs_error).
+        RAISE EXCEPTION TYPE zcx_shk_mail
+          EXPORTING iv_text  = lo_bcs_error->get_text( )
+                    previous = lo_bcs_error.
+    ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD zif_shk_mail~set_body_html.
+    mv_body    = iv_html.
+    mv_is_html = abap_true.
+    ro_self = me.
+  ENDMETHOD.
+
+
+  METHOD zif_shk_mail~set_body_text.
+    mv_body    = iv_body.
+    mv_is_html = abap_false.
+    ro_self = me.
+  ENDMETHOD.
+
+
+  METHOD zif_shk_mail~set_importance.
+    mv_importance = iv_importance.
+    ro_self = me.
+  ENDMETHOD.
+
+
+  METHOD zif_shk_mail~set_sender.
+    mv_sender = iv_address.
+    ro_self = me.
+  ENDMETHOD.
+
+
+  METHOD zif_shk_mail~set_subject.
+    mv_subject = iv_subject.
+    ro_self = me.
   ENDMETHOD.
 ENDCLASS.

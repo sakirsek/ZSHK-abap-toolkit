@@ -28,7 +28,11 @@ CLASS zcx_shk_log DEFINITION
   PRIVATE SECTION.
 ENDCLASS.
 
-CLASS zcx_shk_log IMPLEMENTATION.
+
+
+CLASS ZCX_SHK_LOG IMPLEMENTATION.
+
+
   METHOD constructor ##ADT_SUPPRESS_GENERATION.
     super->constructor( previous = previous ).
     mv_text = iv_text.

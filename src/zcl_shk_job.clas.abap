@@ -19,11 +19,31 @@ CLASS zcl_shk_job DEFINITION
         zcx_shk_job.
 ENDCLASS.
 
-CLASS zcl_shk_job IMPLEMENTATION.
-  METHOD zif_shk_job~set_name.
-    mv_name = iv_name.
-    ro_self = me.
+
+
+CLASS ZCL_SHK_JOB IMPLEMENTATION.
+
+
+  METHOD submit_with_params.
+    IF is_step-variant IS INITIAL.
+      SUBMIT (is_step-program)
+        WITH SELECTION-TABLE is_step-params
+        VIA JOB mv_name NUMBER mv_jobcount
+        AND RETURN.
+    ELSE.
+      SUBMIT (is_step-program)
+        USING SELECTION-SET is_step-variant
+        WITH SELECTION-TABLE is_step-params
+        VIA JOB mv_name NUMBER mv_jobcount
+        AND RETURN.
+    ENDIF.
+
+    IF sy-subrc <> 0.
+      RAISE EXCEPTION TYPE zcx_shk_job
+        EXPORTING iv_text = |SUBMIT VIA JOB failed for { is_step-program } (sy-subrc { sy-subrc })|.
+    ENDIF.
   ENDMETHOD.
+
 
   METHOD zif_shk_job~add_step.
     APPEND VALUE zif_shk_job=>ty_s_step(
@@ -33,12 +53,80 @@ CLASS zcl_shk_job IMPLEMENTATION.
     ro_self = me.
   ENDMETHOD.
 
-  METHOD zif_shk_job~schedule_immediate.
-    ms_schedule-immediate  = abap_true.
-    ms_schedule-start_date = sy-datum.
-    ms_schedule-start_time = sy-uzeit.
-    ro_self = me.
+
+  METHOD zif_shk_job~delete_scheduled.
+    " P scheduled, S released, Z released/suspended; ready and active jobs are left alone
+    SELECT jobcount FROM tbtco
+      WHERE jobname = @iv_name
+        AND status IN ('P','S','Z')
+      INTO TABLE @DATA(lt_jobs).
+
+    LOOP AT lt_jobs INTO DATA(ls_job).
+      CALL FUNCTION 'BP_JOB_DELETE'
+        EXPORTING
+          jobcount                 = ls_job-jobcount
+          jobname                  = iv_name
+        EXCEPTIONS
+          cant_delete_event_entry  = 1
+          cant_delete_job          = 2
+          cant_delete_joblog       = 3
+          cant_delete_steps        = 4
+          cant_delete_time_entry   = 5
+          cant_derelease_successor = 6
+          cant_enq_predecessor     = 7
+          cant_enq_successor       = 8
+          cant_enq_tbtco_entry     = 9
+          cant_update_predecessor  = 10
+          cant_update_successor    = 11
+          commit_failed            = 12
+          jobcount_missing         = 13
+          jobname_missing          = 14
+          job_does_not_exist       = 15
+          job_is_already_running   = 16
+          no_delete_authority      = 17
+          OTHERS                   = 18.
+
+      IF sy-subrc <> 0.
+        RAISE EXCEPTION TYPE zcx_shk_job
+          EXPORTING iv_text = |BP_JOB_DELETE failed for { iv_name } { ls_job-jobcount } (sy-subrc { sy-subrc })|.
+      ENDIF.
+      rv_deleted = rv_deleted + 1.
+    ENDLOOP.
   ENDMETHOD.
+
+
+  METHOD zif_shk_job~is_running.
+    DATA ls_sel TYPE btcselect.
+    DATA lt_joblist TYPE STANDARD TABLE OF tbtcjob.
+
+    ls_sel-jobname  = iv_name.
+    ls_sel-username = '*'.
+    ls_sel-running  = abap_true.
+    ls_sel-from_date = sy-datum - 1.
+    ls_sel-to_date   = sy-datum.
+
+    CALL FUNCTION 'BP_JOB_SELECT'
+      EXPORTING
+        jobselect_dialog  = 'N'
+        jobsel_param_in   = ls_sel
+      TABLES
+        jobselect_joblist = lt_joblist
+      EXCEPTIONS
+        OTHERS            = 1.
+
+    rv_running = xsdbool( lt_joblist IS NOT INITIAL ).
+  ENDMETHOD.
+
+
+  METHOD zif_shk_job~is_scheduled.
+    " S released, Z released/suspended, Y ready, R active
+    SELECT SINGLE jobcount FROM tbtco
+      WHERE jobname = @iv_name
+        AND status IN ('S','Z','Y','R')
+      INTO @DATA(lv_jobcount).
+    rv_scheduled = xsdbool( sy-subrc = 0 ).
+  ENDMETHOD.
+
 
   METHOD zif_shk_job~schedule_at.
     ms_schedule-immediate  = abap_false.
@@ -47,10 +135,26 @@ CLASS zcl_shk_job IMPLEMENTATION.
     ro_self = me.
   ENDMETHOD.
 
+
+  METHOD zif_shk_job~schedule_immediate.
+    ms_schedule-immediate  = abap_true.
+    ms_schedule-start_date = sy-datum.
+    ms_schedule-start_time = sy-uzeit.
+    ro_self = me.
+  ENDMETHOD.
+
+
+  METHOD zif_shk_job~set_name.
+    mv_name = iv_name.
+    ro_self = me.
+  ENDMETHOD.
+
+
   METHOD zif_shk_job~set_period.
     ms_schedule-period_min = iv_minutes.
     ro_self = me.
   ENDMETHOD.
+
 
   METHOD zif_shk_job~submit.
     IF mv_name IS INITIAL.
@@ -175,96 +279,5 @@ CLASS zcl_shk_job IMPLEMENTATION.
 
     rv_jobcount = mv_jobcount.
     CLEAR: mt_steps, ms_schedule.
-  ENDMETHOD.
-
-  METHOD zif_shk_job~is_running.
-    DATA ls_sel TYPE btcselect.
-    DATA lt_joblist TYPE STANDARD TABLE OF tbtcjob.
-
-    ls_sel-jobname  = iv_name.
-    ls_sel-username = '*'.
-    ls_sel-running  = abap_true.
-    ls_sel-from_date = sy-datum - 1.
-    ls_sel-to_date   = sy-datum.
-
-    CALL FUNCTION 'BP_JOB_SELECT'
-      EXPORTING
-        jobselect_dialog  = 'N'
-        jobsel_param_in   = ls_sel
-      TABLES
-        jobselect_joblist = lt_joblist
-      EXCEPTIONS
-        OTHERS            = 1.
-
-    rv_running = xsdbool( lt_joblist IS NOT INITIAL ).
-  ENDMETHOD.
-
-  METHOD zif_shk_job~is_scheduled.
-    " S released, Z released/suspended, Y ready, R active
-    SELECT SINGLE jobcount FROM tbtco
-      WHERE jobname = @iv_name
-        AND status IN ('S','Z','Y','R')
-      INTO @DATA(lv_jobcount).
-    rv_scheduled = xsdbool( sy-subrc = 0 ).
-  ENDMETHOD.
-
-  METHOD zif_shk_job~delete_scheduled.
-    " P scheduled, S released, Z released/suspended; ready and active jobs are left alone
-    SELECT jobcount FROM tbtco
-      WHERE jobname = @iv_name
-        AND status IN ('P','S','Z')
-      INTO TABLE @DATA(lt_jobs).
-
-    LOOP AT lt_jobs INTO DATA(ls_job).
-      CALL FUNCTION 'BP_JOB_DELETE'
-        EXPORTING
-          jobcount                 = ls_job-jobcount
-          jobname                  = iv_name
-        EXCEPTIONS
-          cant_delete_event_entry  = 1
-          cant_delete_job          = 2
-          cant_delete_joblog       = 3
-          cant_delete_steps        = 4
-          cant_delete_time_entry   = 5
-          cant_derelease_successor = 6
-          cant_enq_predecessor     = 7
-          cant_enq_successor       = 8
-          cant_enq_tbtco_entry     = 9
-          cant_update_predecessor  = 10
-          cant_update_successor    = 11
-          commit_failed            = 12
-          jobcount_missing         = 13
-          jobname_missing          = 14
-          job_does_not_exist       = 15
-          job_is_already_running   = 16
-          no_delete_authority      = 17
-          OTHERS                   = 18.
-
-      IF sy-subrc <> 0.
-        RAISE EXCEPTION TYPE zcx_shk_job
-          EXPORTING iv_text = |BP_JOB_DELETE failed for { iv_name } { ls_job-jobcount } (sy-subrc { sy-subrc })|.
-      ENDIF.
-      rv_deleted = rv_deleted + 1.
-    ENDLOOP.
-  ENDMETHOD.
-
-  METHOD submit_with_params.
-    IF is_step-variant IS INITIAL.
-      SUBMIT (is_step-program)
-        WITH SELECTION-TABLE is_step-params
-        VIA JOB mv_name NUMBER mv_jobcount
-        AND RETURN.
-    ELSE.
-      SUBMIT (is_step-program)
-        USING SELECTION-SET is_step-variant
-        WITH SELECTION-TABLE is_step-params
-        VIA JOB mv_name NUMBER mv_jobcount
-        AND RETURN.
-    ENDIF.
-
-    IF sy-subrc <> 0.
-      RAISE EXCEPTION TYPE zcx_shk_job
-        EXPORTING iv_text = |SUBMIT VIA JOB failed for { is_step-program } (sy-subrc { sy-subrc })|.
-    ENDIF.
   ENDMETHOD.
 ENDCLASS.

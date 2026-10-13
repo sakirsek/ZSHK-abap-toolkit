@@ -34,7 +34,11 @@ CLASS zcl_shk_http DEFINITION
         zcx_shk_http.
 ENDCLASS.
 
-CLASS zcl_shk_http IMPLEMENTATION.
+
+
+CLASS ZCL_SHK_HTTP IMPLEMENTATION.
+
+
   METHOD constructor.
     mv_url        = iv_url.
     mv_ssl_id     = iv_ssl_id.
@@ -42,45 +46,6 @@ CLASS zcl_shk_http IMPLEMENTATION.
     mv_proxy_port = iv_proxy_port.
   ENDMETHOD.
 
-  METHOD zif_shk_http~set_header.
-    APPEND VALUE zif_shk_http=>ty_s_name_value( name = iv_name value = iv_value ) TO mt_headers.
-    ro_self = me.
-  ENDMETHOD.
-
-  METHOD zif_shk_http~set_timeout.
-    mv_timeout = iv_timeout.
-    ro_self = me.
-  ENDMETHOD.
-
-  METHOD zif_shk_http~set_basic_auth.
-    mv_user     = iv_user.
-    mv_password = iv_password.
-    ro_self = me.
-  ENDMETHOD.
-
-  METHOD zif_shk_http~get.
-    rs_response = execute( iv_method = 'GET' iv_path = iv_path ).
-  ENDMETHOD.
-
-  METHOD zif_shk_http~post.
-    rs_response = execute( iv_method = 'POST' iv_path = iv_path iv_body = iv_body ).
-  ENDMETHOD.
-
-  METHOD zif_shk_http~put.
-    rs_response = execute( iv_method = 'PUT' iv_path = iv_path iv_body = iv_body ).
-  ENDMETHOD.
-
-  METHOD zif_shk_http~patch.
-    rs_response = execute( iv_method = 'PATCH' iv_path = iv_path iv_body = iv_body ).
-  ENDMETHOD.
-
-  METHOD zif_shk_http~delete.
-    rs_response = execute( iv_method = 'DELETE' iv_path = iv_path ).
-  ENDMETHOD.
-
-  METHOD zif_shk_http~close.
-    CLEAR: mt_headers, mv_user, mv_password.
-  ENDMETHOD.
 
   METHOD execute.
     DATA lv_full_url TYPE string.
@@ -174,5 +139,54 @@ CLASS zcl_shk_http IMPLEMENTATION.
     rs_response-body = lo_client->response->get_cdata( ).
 
     lo_client->close( ).
+  ENDMETHOD.
+
+
+  METHOD zif_shk_http~close.
+    CLEAR: mt_headers, mv_user, mv_password.
+  ENDMETHOD.
+
+
+  METHOD zif_shk_http~delete.
+    rs_response = execute( iv_method = 'DELETE' iv_path = iv_path ).
+  ENDMETHOD.
+
+
+  METHOD zif_shk_http~get.
+    rs_response = execute( iv_method = 'GET' iv_path = iv_path ).
+  ENDMETHOD.
+
+
+  METHOD zif_shk_http~patch.
+    rs_response = execute( iv_method = 'PATCH' iv_path = iv_path iv_body = iv_body ).
+  ENDMETHOD.
+
+
+  METHOD zif_shk_http~post.
+    rs_response = execute( iv_method = 'POST' iv_path = iv_path iv_body = iv_body ).
+  ENDMETHOD.
+
+
+  METHOD zif_shk_http~put.
+    rs_response = execute( iv_method = 'PUT' iv_path = iv_path iv_body = iv_body ).
+  ENDMETHOD.
+
+
+  METHOD zif_shk_http~set_basic_auth.
+    mv_user     = iv_user.
+    mv_password = iv_password.
+    ro_self = me.
+  ENDMETHOD.
+
+
+  METHOD zif_shk_http~set_header.
+    APPEND VALUE zif_shk_http=>ty_s_name_value( name = iv_name value = iv_value ) TO mt_headers.
+    ro_self = me.
+  ENDMETHOD.
+
+
+  METHOD zif_shk_http~set_timeout.
+    mv_timeout = iv_timeout.
+    ro_self = me.
   ENDMETHOD.
 ENDCLASS.

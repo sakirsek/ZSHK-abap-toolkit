@@ -28,7 +28,11 @@ CLASS zcx_shk_job DEFINITION
   PRIVATE SECTION.
 ENDCLASS.
 
-CLASS zcx_shk_job IMPLEMENTATION.
+
+
+CLASS ZCX_SHK_JOB IMPLEMENTATION.
+
+
   METHOD constructor ##ADT_SUPPRESS_GENERATION.
     super->constructor( previous = previous ).
     mv_text = iv_text.

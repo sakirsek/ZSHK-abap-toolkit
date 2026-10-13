@@ -30,7 +30,11 @@ CLASS zcx_shk_http DEFINITION
   PRIVATE SECTION.
 ENDCLASS.
 
-CLASS zcx_shk_http IMPLEMENTATION.
+
+
+CLASS ZCX_SHK_HTTP IMPLEMENTATION.
+
+
   METHOD constructor ##ADT_SUPPRESS_GENERATION.
     super->constructor( previous = previous ).
     mv_text = iv_text.

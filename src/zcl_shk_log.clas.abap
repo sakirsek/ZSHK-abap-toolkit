@@ -43,7 +43,25 @@ CLASS zcl_shk_log DEFINITION
         iv_text   TYPE bapi_msg DEFAULT space.
 ENDCLASS.
 
-CLASS zcl_shk_log IMPLEMENTATION.
+
+
+CLASS ZCL_SHK_LOG IMPLEMENTATION.
+
+
+  METHOD append_msg.
+    DATA ls_msg TYPE zif_shk_log=>ty_s_msg.
+    ls_msg-type    = iv_type.
+    ls_msg-id      = iv_id.
+    ls_msg-number  = iv_number.
+    ls_msg-message = iv_text.
+    ls_msg-v1      = iv_v1.
+    ls_msg-v2      = iv_v2.
+    ls_msg-v3      = iv_v3.
+    ls_msg-v4      = iv_v4.
+    APPEND ls_msg TO mt_messages.
+  ENDMETHOD.
+
+
   METHOD constructor.
     mv_object    = iv_object.
     mv_subobject = iv_subobject.
@@ -51,6 +69,7 @@ CLASS zcl_shk_log IMPLEMENTATION.
     mv_keep_days = iv_keep_days.
     mv_created   = abap_false.
   ENDMETHOD.
+
 
   METHOD ensure_log_created.
     IF mv_created = abap_true.
@@ -95,25 +114,6 @@ CLASS zcl_shk_log IMPLEMENTATION.
     mv_created = abap_true.
   ENDMETHOD.
 
-  METHOD append_msg.
-    DATA ls_msg TYPE zif_shk_log=>ty_s_msg.
-    ls_msg-type    = iv_type.
-    ls_msg-id      = iv_id.
-    ls_msg-number  = iv_number.
-    ls_msg-message = iv_text.
-    ls_msg-v1      = iv_v1.
-    ls_msg-v2      = iv_v2.
-    ls_msg-v3      = iv_v3.
-    ls_msg-v4      = iv_v4.
-    APPEND ls_msg TO mt_messages.
-  ENDMETHOD.
-
-  METHOD zif_shk_log~add_free_text.
-    append_msg(
-      iv_type = iv_type
-      iv_v1   = CONV #( iv_text )
-      iv_text = CONV #( iv_text ) ).
-  ENDMETHOD.
 
   METHOD zif_shk_log~add_bapiret2.
     append_msg(
@@ -127,11 +127,31 @@ CLASS zcl_shk_log IMPLEMENTATION.
       iv_text   = is_return-message ).
   ENDMETHOD.
 
+
   METHOD zif_shk_log~add_bapiret2_table.
     LOOP AT it_return INTO DATA(ls_return).
       zif_shk_log~add_bapiret2( ls_return ).
     ENDLOOP.
   ENDMETHOD.
+
+
+  METHOD zif_shk_log~add_exception.
+    DATA lv_text TYPE string.
+    lv_text = io_exception->get_text( ).
+    append_msg(
+      iv_type = iv_type
+      iv_v1   = CONV #( lv_text )
+      iv_text = CONV #( lv_text ) ).
+  ENDMETHOD.
+
+
+  METHOD zif_shk_log~add_free_text.
+    append_msg(
+      iv_type = iv_type
+      iv_v1   = CONV #( iv_text )
+      iv_text = CONV #( iv_text ) ).
+  ENDMETHOD.
+
 
   METHOD zif_shk_log~add_sy_msg.
     append_msg(
@@ -144,14 +164,27 @@ CLASS zcl_shk_log IMPLEMENTATION.
       iv_v4     = iv_v4 ).
   ENDMETHOD.
 
-  METHOD zif_shk_log~add_exception.
-    DATA lv_text TYPE string.
-    lv_text = io_exception->get_text( ).
-    append_msg(
-      iv_type = iv_type
-      iv_v1   = CONV #( lv_text )
-      iv_text = CONV #( lv_text ) ).
+
+  METHOD zif_shk_log~clear.
+    CLEAR mt_messages.
   ENDMETHOD.
+
+
+  METHOD zif_shk_log~get_count.
+    rv_count = lines( mt_messages ).
+  ENDMETHOD.
+
+
+  METHOD zif_shk_log~get_messages.
+    rt_messages = mt_messages.
+  ENDMETHOD.
+
+
+  METHOD zif_shk_log~has_errors.
+    rv_has_errors = xsdbool( line_exists( mt_messages[ type = 'E' ] )
+                          OR line_exists( mt_messages[ type = 'A' ] ) ).
+  ENDMETHOD.
+
 
   METHOD zif_shk_log~save.
     ensure_log_created( ).
@@ -235,22 +268,5 @@ CLASS zcl_shk_log IMPLEMENTATION.
       RAISE EXCEPTION TYPE zcx_shk_log
         EXPORTING iv_text = |BAL_DB_SAVE failed: { sy-msgv1 }|.
     ENDIF.
-  ENDMETHOD.
-
-  METHOD zif_shk_log~get_messages.
-    rt_messages = mt_messages.
-  ENDMETHOD.
-
-  METHOD zif_shk_log~has_errors.
-    rv_has_errors = xsdbool( line_exists( mt_messages[ type = 'E' ] )
-                          OR line_exists( mt_messages[ type = 'A' ] ) ).
-  ENDMETHOD.
-
-  METHOD zif_shk_log~get_count.
-    rv_count = lines( mt_messages ).
-  ENDMETHOD.
-
-  METHOD zif_shk_log~clear.
-    CLEAR mt_messages.
   ENDMETHOD.
 ENDCLASS.
