@@ -7,7 +7,7 @@ PARAMETERS p_to   TYPE ad_smtpadr.
 PARAMETERS p_cc   TYPE ad_smtpadr.
 PARAMETERS p_bcc  TYPE ad_smtpadr.
 PARAMETERS p_from TYPE ad_smtpadr.
-PARAMETERS p_subj TYPE so_obj_des DEFAULT 'ZSHK Mail Test'.
+PARAMETERS p_subj TYPE c LENGTH 120 LOWER CASE DEFAULT 'ZSHK Mail Test: subjects longer than 50 characters are sent in full'.
 PARAMETERS p_html TYPE abap_bool AS CHECKBOX DEFAULT 'X'.
 PARAMETERS p_att  TYPE abap_bool AS CHECKBOX DEFAULT 'X'.
 PARAMETERS p_tabl TYPE abap_bool AS CHECKBOX DEFAULT 'X'.
@@ -24,7 +24,7 @@ START-OF-SELECTION.
 
   DATA(lo_mail) = NEW zcl_shk_mail( ).
 
-  " set_subject
+  " set_subject (longer than 50 characters is kept in full)
   lo_mail->zif_shk_mail~set_subject( p_subj ).
 
   " set_body_html / set_body_text
@@ -40,13 +40,13 @@ START-OF-SELECTION.
     WRITE: / 'Body: Plain text'.
   ENDIF.
 
-  " add_table — internal table to HTML table
+  " add_table: internal table to HTML table, cell values are HTML-escaped
   IF p_tabl = abap_true.
     DATA lt_demo TYPE STANDARD TABLE OF ty_demo_row.
     lt_demo = VALUE #(
       ( matnr = 'MAT001' maktx = 'Kablo 2.5mm' meins = 'MT' )
       ( matnr = 'MAT002' maktx = 'Terminal Tip A' meins = 'AD' )
-      ( matnr = 'MAT003' maktx = 'Conta 10x15' meins = 'AD' ) ).
+      ( matnr = 'MAT003' maktx = 'Conta <10x15> & O-ring' meins = 'AD' ) ).
 
     " with custom column titles
     DATA lt_cols TYPE zif_shk_mail=>ty_t_column.

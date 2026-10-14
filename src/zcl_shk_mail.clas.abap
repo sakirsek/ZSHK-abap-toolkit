@@ -13,7 +13,9 @@ CLASS zcl_shk_mail DEFINITION
         copy    TYPE char1,
       END OF ty_s_recipient.
 
-    DATA mv_subject    TYPE so_obj_des.
+    CONSTANTS c_short_subject_length TYPE i VALUE 50.
+
+    DATA mv_subject    TYPE string.
     DATA mv_body       TYPE string.
     DATA mv_is_html    TYPE abap_bool.
     DATA mv_sender     TYPE adr6-smtp_addr.
@@ -32,6 +34,12 @@ CLASS zcl_shk_mail DEFINITION
         iv_title         TYPE clike OPTIONAL
       RETURNING
         VALUE(rv_html)   TYPE string.
+
+    METHODS html_text
+      IMPORTING
+        iv_text        TYPE csequence
+      RETURNING
+        VALUE(rv_html) TYPE string.
 ENDCLASS.
 
 
@@ -47,7 +55,7 @@ CLASS ZCL_SHK_MAIL IMPLEMENTATION.
           ro_document = cl_document_bcs=>create_document(
             i_type    = 'HTM'
             i_text    = lt_html
-            i_subject = mv_subject
+            i_subject = CONV so_obj_des( mv_subject )
             i_importance = mv_importance ).
         ELSE.
           DATA lt_text TYPE soli_tab.
@@ -55,7 +63,7 @@ CLASS ZCL_SHK_MAIL IMPLEMENTATION.
           ro_document = cl_document_bcs=>create_document(
             i_type    = 'RAW'
             i_text    = lt_text
-            i_subject = mv_subject
+            i_subject = CONV so_obj_des( mv_subject )
             i_importance = mv_importance ).
         ENDIF.
 
@@ -90,7 +98,7 @@ CLASS ZCL_SHK_MAIL IMPLEMENTATION.
     DATA(lt_components) = lo_struct->get_components( ).
 
     IF iv_title IS NOT INITIAL.
-      rv_html = |<h3>{ iv_title }</h3>|.
+      rv_html = |<h3>{ html_text( iv_title ) }</h3>|.
     ENDIF.
 
     rv_html = rv_html &&
@@ -111,7 +119,7 @@ CLASS ZCL_SHK_MAIL IMPLEMENTATION.
       IF lv_header IS INITIAL.
         lv_header = ls_comp-name.
       ENDIF.
-      rv_html = rv_html && |<td>{ lv_header }</td>|.
+      rv_html = rv_html && |<td>{ html_text( lv_header ) }</td>|.
     ENDLOOP.
     rv_html = rv_html && '</tr>'.
 
@@ -126,7 +134,7 @@ CLASS ZCL_SHK_MAIL IMPLEMENTATION.
       LOOP AT lt_components INTO ls_comp.
         ASSIGN COMPONENT ls_comp-name OF STRUCTURE <ls_row> TO <lv_field>.
         IF sy-subrc = 0.
-          rv_html = rv_html && |<td>{ <lv_field> }</td>|.
+          rv_html = rv_html && |<td>{ html_text( |{ <lv_field> }| ) }</td>|.
         ELSE.
           rv_html = rv_html && '<td></td>'.
         ENDIF.
@@ -135,6 +143,11 @@ CLASS ZCL_SHK_MAIL IMPLEMENTATION.
     ENDLOOP.
 
     rv_html = rv_html && '</table><br>'.
+  ENDMETHOD.
+
+
+  METHOD html_text.
+    rv_html = escape( val = iv_text format = cl_abap_format=>e_html_text ).
   ENDMETHOD.
 
 
@@ -194,6 +207,9 @@ CLASS ZCL_SHK_MAIL IMPLEMENTATION.
         DATA(lo_bcs) = cl_bcs=>create_persistent( ).
         DATA(lo_doc) = build_document( ).
         lo_bcs->set_document( lo_doc ).
+        IF strlen( mv_subject ) > c_short_subject_length.
+          lo_bcs->set_message_subject( mv_subject ).
+        ENDIF.
 
         LOOP AT mt_recipients INTO DATA(ls_recip).
           DATA(lo_recip) = cl_cam_address_bcs=>create_internet_address( ls_recip-address ).
@@ -257,3 +273,4 @@ CLASS ZCL_SHK_MAIL IMPLEMENTATION.
     ro_self = me.
   ENDMETHOD.
 ENDCLASS.
+
