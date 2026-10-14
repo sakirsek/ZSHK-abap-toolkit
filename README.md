@@ -76,6 +76,8 @@ lo_mail->zif_shk_mail~add_recipient( 'user@example.com' ).
 lo_mail->zif_shk_mail~send( ).
 ```
 
+Subjects longer than 50 characters are sent in full (`CL_BCS->set_message_subject`); SAPoffice (SOST) lists the first 50. `add_table` HTML-escapes the title, column headers and cell values, so put links or other markup in `set_body_html`, not in table cells.
+
 ### FTP
 
 ```abap
