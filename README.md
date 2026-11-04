@@ -97,6 +97,10 @@ lo_ftp->zif_shk_ftp~rename_file( iv_from = 'export.csv' iv_to = 'Archive/export.
 lo_ftp->zif_shk_ftp~disconnect( ).
 ```
 
+Failed calls report the SAPFTP message and the last server reply in the exception text.
+
+> **Parallel jobs:** `sapftp` writes each command's output to a temp file named by a plain counter (seen on a Windows application server). Concurrent `SAPFTPA` sessions on one application server can take the same file: `FTP_COMMAND` then fails with message 04 208, or `dir` returns lines from another session's folder. If you run FTP jobs in parallel, let one FTP command run at a time per application server, for example with an enqueue lock on `sy-host`.
+
 ### HTTP
 
 ```abap
