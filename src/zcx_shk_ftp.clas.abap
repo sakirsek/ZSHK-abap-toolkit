@@ -24,6 +24,8 @@ CLASS zcx_shk_ftp DEFINITION
         previous LIKE previous OPTIONAL
         iv_text  TYPE string OPTIONAL.
 
+    METHODS if_message~get_text REDEFINITION.
+
   PROTECTED SECTION.
   PRIVATE SECTION.
 ENDCLASS.
@@ -43,4 +45,11 @@ CLASS ZCX_SHK_FTP IMPLEMENTATION.
       if_t100_message~t100key = textid.
     ENDIF.
   ENDMETHOD.
+
+
+  METHOD if_message~get_text.
+    result = COND #( WHEN mv_text IS NOT INITIAL THEN mv_text
+                     ELSE super->if_message~get_text( ) ).
+  ENDMETHOD.
 ENDCLASS.
+
