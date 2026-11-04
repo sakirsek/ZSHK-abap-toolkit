@@ -1,3 +1,7 @@
+CLASS ltc_failure_reason DEFINITION DEFERRED.
+CLASS zcl_shk_ftp DEFINITION LOCAL FRIENDS ltc_failure_reason.
+
+
 CLASS ltc_parse_listing DEFINITION FINAL
   FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
 
@@ -88,6 +92,41 @@ CLASS ltc_parse_listing IMPLEMENTATION.
       it_lines = VALUE #( ( `x.edi` ) ( `Y.EDI` ) ( `z.txt` ) )
       iv_mask  = '*.Edi' ).
     cl_abap_unit_assert=>assert_equals( act = lines( lt_files ) exp = 2 ).
+  ENDMETHOD.
+
+ENDCLASS.
+
+
+CLASS ltc_failure_reason DEFINITION FINAL
+  FOR TESTING RISK LEVEL HARMLESS DURATION SHORT.
+
+  PRIVATE SECTION.
+    METHODS ftp_message_is_the_reason FOR TESTING.
+    METHODS last_reply_line_is_added FOR TESTING.
+    METHODS foreign_message_is_ignored FOR TESTING.
+
+ENDCLASS.
+
+
+CLASS ltc_failure_reason IMPLEMENTATION.
+
+  METHOD ftp_message_is_the_reason.
+    MESSAGE e208(04) INTO DATA(lv_text).
+    cl_abap_unit_assert=>assert_equals( act = zcl_shk_ftp=>failure_reason( )
+                                        exp = lv_text ).
+  ENDMETHOD.
+
+  METHOD last_reply_line_is_added.
+    MESSAGE e209(04) INTO DATA(lv_text).
+    cl_abap_unit_assert=>assert_equals(
+      act = zcl_shk_ftp=>failure_reason( VALUE #( ( `cd /missing` ) ( `550 Not found` ) ( `` ) ) )
+      exp = |{ lv_text } 550 Not found| ).
+  ENDMETHOD.
+
+  METHOD foreign_message_is_ignored.
+    MESSAGE e398(00) WITH 'a' 'b' 'c' 'd' INTO DATA(lv_text).
+    cl_abap_unit_assert=>assert_equals( act = zcl_shk_ftp=>failure_reason( )
+                                        exp = `no reason reported` ).
   ENDMETHOD.
 
 ENDCLASS.

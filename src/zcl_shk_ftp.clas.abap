@@ -32,6 +32,14 @@ public section.
     DATA mv_connected TYPE abap_bool.
     DATA mv_passive   TYPE abap_bool.
 
+    CONSTANTS ftp_message_class TYPE symsgid VALUE '04'.
+
+    CLASS-METHODS failure_reason
+      IMPORTING
+        it_reply         TYPE string_table OPTIONAL
+      RETURNING
+        VALUE(rv_reason) TYPE string.
+
     METHODS run_command
       IMPORTING
         iv_command       TYPE clike
@@ -61,6 +69,23 @@ CLASS ZCL_SHK_FTP IMPLEMENTATION.
     mv_port      = iv_port.
     mv_passive   = iv_passive.
     mv_connected = abap_false.
+  ENDMETHOD.
+
+
+  METHOD failure_reason.
+    IF sy-msgid = ftp_message_class.
+      MESSAGE ID sy-msgid TYPE 'S' NUMBER sy-msgno
+        WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4 INTO rv_reason.
+    ENDIF.
+
+    DATA(lt_reply) = it_reply.
+    DELETE lt_reply WHERE table_line IS INITIAL.
+    DATA(lv_reply) = VALUE string( lt_reply[ lines( lt_reply ) ] OPTIONAL ).
+
+    rv_reason = condense( |{ rv_reason } { lv_reply }| ).
+    IF rv_reason IS INITIAL.
+      rv_reason = `no reason reported`.
+    ENDIF.
   ENDMETHOD.
 
 
@@ -163,7 +188,8 @@ CLASS ZCL_SHK_FTP IMPLEMENTATION.
 
     IF sy-subrc <> 0.
       RAISE EXCEPTION TYPE zcx_shk_ftp
-        EXPORTING iv_text = |FTP command failed: { iv_command }|.
+        EXPORTING iv_text = |FTP command failed: { iv_command }: {
+                            failure_reason( VALUE #( FOR lv_line IN lt_raw ( condense( CONV string( lv_line ) ) ) ) ) }|.
     ENDIF.
 
     rt_result = VALUE #( FOR lv_raw IN lt_raw ( CONV string( lv_raw ) ) ).
@@ -211,7 +237,7 @@ CLASS ZCL_SHK_FTP IMPLEMENTATION.
 
     IF sy-subrc <> 0.
       RAISE EXCEPTION TYPE zcx_shk_ftp
-        EXPORTING iv_text = |FTP connection failed to { mv_host }: { sy-msgv1 }|.
+        EXPORTING iv_text = |FTP connection failed to { mv_host }: { failure_reason( ) }|.
     ENDIF.
 
     mv_connected = abap_true.
@@ -273,7 +299,7 @@ CLASS ZCL_SHK_FTP IMPLEMENTATION.
 
     IF sy-subrc <> 0.
       RAISE EXCEPTION TYPE zcx_shk_ftp
-        EXPORTING iv_text = |FTP download failed: { iv_remote_path }|.
+        EXPORTING iv_text = |FTP download failed: { iv_remote_path }: { failure_reason( ) }|.
     ENDIF.
 
     CALL FUNCTION 'SCMS_BINARY_TO_XSTRING'
@@ -412,7 +438,7 @@ CLASS ZCL_SHK_FTP IMPLEMENTATION.
 
     IF sy-subrc <> 0.
       RAISE EXCEPTION TYPE zcx_shk_ftp
-        EXPORTING iv_text = |FTP upload failed: { iv_remote_path }|.
+        EXPORTING iv_text = |FTP upload failed: { iv_remote_path }: { failure_reason( ) }|.
     ENDIF.
   ENDMETHOD.
 
