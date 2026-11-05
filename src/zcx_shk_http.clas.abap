@@ -26,6 +26,8 @@ CLASS zcx_shk_http DEFINITION
         iv_text        TYPE string OPTIONAL
         iv_status_code TYPE i OPTIONAL.
 
+    METHODS if_message~get_text REDEFINITION.
+
   PROTECTED SECTION.
   PRIVATE SECTION.
 ENDCLASS.
@@ -46,4 +48,11 @@ CLASS ZCX_SHK_HTTP IMPLEMENTATION.
       if_t100_message~t100key = textid.
     ENDIF.
   ENDMETHOD.
+
+
+  METHOD if_message~get_text.
+    result = COND #( WHEN mv_text IS NOT INITIAL THEN mv_text
+                     ELSE super->if_message~get_text( ) ).
+  ENDMETHOD.
 ENDCLASS.
+
