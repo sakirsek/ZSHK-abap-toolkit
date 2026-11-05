@@ -19,11 +19,27 @@ CLASS ltc_mail DEFINITION FINAL
     METHODS titles_are_escaped FOR TESTING.
     METHODS column_titles_used FOR TESTING.
     METHODS long_subject_kept FOR TESTING.
+    METHODS html_body_is_not_inline FOR TESTING RAISING cx_static_check.
+    METHODS html_mail_stays_single_part FOR TESTING RAISING cx_static_check.
+    METHODS text_mail_uses_bcs_attachment FOR TESTING RAISING cx_static_check.
 
     METHODS assert_contains
       IMPORTING
         iv_html TYPE string
         iv_part TYPE string.
+
+    METHODS assert_not_contains
+      IMPORTING
+        iv_html TYPE string
+        iv_part TYPE string.
+
+    METHODS add_attachment.
+
+    METHODS mime_text
+      RETURNING
+        VALUE(rv_mime) TYPE string
+      RAISING
+        cx_static_check.
 
 ENDCLASS.
 
@@ -32,6 +48,7 @@ CLASS ltc_mail IMPLEMENTATION.
 
   METHOD setup.
     mo_cut = NEW #( ).
+    mo_cut->zif_shk_mail~set_subject( 'Test' ).
   ENDMETHOD.
 
 
@@ -75,10 +92,72 @@ CLASS ltc_mail IMPLEMENTATION.
   ENDMETHOD.
 
 
+  METHOD html_body_is_not_inline.
+    mo_cut->zif_shk_mail~set_body_html( `<p>Deneme</p>` ).
+    add_attachment( ).
+
+    DATA(lv_mime) = mime_text( ).
+
+    assert_contains( iv_html = lv_mime iv_part = `multipart/mixed` ).
+    assert_contains( iv_html = lv_mime iv_part = `text/html` ).
+    assert_contains( iv_html = lv_mime iv_part = `<p>Deneme</p>` ).
+    assert_contains( iv_html = lv_mime iv_part = `Content-Disposition: attachment` ).
+    assert_contains( iv_html = lv_mime iv_part = `filename="Dosya.xlsx"` ).
+    assert_contains( iv_html = lv_mime iv_part = `QUJD` ).
+    assert_not_contains( iv_html = lv_mime iv_part = `Content-Disposition: inline` ).
+    assert_not_contains( iv_html = lv_mime iv_part = `text/plain` ).
+  ENDMETHOD.
+
+
+  METHOD html_mail_stays_single_part.
+    mo_cut->zif_shk_mail~set_body_html( `<p>Deneme</p>` ).
+
+    DATA(lv_mime) = mime_text( ).
+
+    assert_contains( iv_html = lv_mime iv_part = `text/html` ).
+    assert_not_contains( iv_html = lv_mime iv_part = `multipart/` ).
+  ENDMETHOD.
+
+
+  METHOD text_mail_uses_bcs_attachment.
+    mo_cut->zif_shk_mail~set_body_text( `Deneme` ).
+    add_attachment( ).
+
+    DATA(lv_mime) = mime_text( ).
+
+    assert_contains( iv_html = lv_mime iv_part = `multipart/mixed` ).
+    assert_contains( iv_html = lv_mime iv_part = `Content-Disposition: inline` ).
+    assert_contains( iv_html = lv_mime iv_part = `Dosya.xlsx` ).
+  ENDMETHOD.
+
+
   METHOD assert_contains.
     cl_abap_unit_assert=>assert_true(
       act = xsdbool( contains( val = iv_html sub = iv_part ) )
       msg = |"{ iv_part }" not found in { iv_html }| ).
+  ENDMETHOD.
+
+
+  METHOD assert_not_contains.
+    cl_abap_unit_assert=>assert_false(
+      act = xsdbool( contains( val = iv_html sub = iv_part ) )
+      msg = |"{ iv_part }" unexpectedly found in { iv_html }| ).
+  ENDMETHOD.
+
+
+  METHOD add_attachment.
+    DATA lv_file TYPE xstring.
+    lv_file = '414243'.
+
+    mo_cut->zif_shk_mail~add_attachment( iv_filename = 'Dosya.xlsx' iv_content = lv_file ).
+  ENDMETHOD.
+
+
+  METHOD mime_text.
+    DATA(lv_mime) = CAST if_document_bcs( mo_cut->build_document( ) )->as_mime_document(
+      NEW cl_sx_mime_singlepart( ) ).
+
+    rv_mime = cl_abap_codepage=>convert_from( source = lv_mime codepage = `UTF-8` ).
   ENDMETHOD.
 
 ENDCLASS.

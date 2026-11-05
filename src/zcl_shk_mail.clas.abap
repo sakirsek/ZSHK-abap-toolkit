@@ -14,6 +14,7 @@ CLASS zcl_shk_mail DEFINITION
       END OF ty_s_recipient.
 
     CONSTANTS c_short_subject_length TYPE i VALUE 50.
+    CONSTANTS c_utf8 TYPE cpcodepage VALUE '4110'.
 
     DATA mv_subject    TYPE string.
     DATA mv_body       TYPE string.
@@ -26,6 +27,11 @@ CLASS zcl_shk_mail DEFINITION
     METHODS build_document
       RETURNING VALUE(ro_document) TYPE REF TO cl_document_bcs
       RAISING   zcx_shk_mail.
+
+    METHODS build_html_with_attachments
+      RETURNING VALUE(ro_document) TYPE REF TO cl_document_bcs
+      RAISING   cx_bcs
+                cx_bcom_mime.
 
     METHODS render_table_html
       IMPORTING
@@ -49,6 +55,11 @@ CLASS ZCL_SHK_MAIL IMPLEMENTATION.
 
   METHOD build_document.
     TRY.
+        IF mv_is_html = abap_true AND mt_attachments IS NOT INITIAL.
+          ro_document = build_html_with_attachments( ).
+          RETURN.
+        ENDIF.
+
         IF mv_is_html = abap_true.
           DATA lt_html TYPE soli_tab.
           lt_html = cl_bcs_convert=>string_to_soli( mv_body ).
@@ -79,11 +90,55 @@ CLASS ZCL_SHK_MAIL IMPLEMENTATION.
             i_att_content_hex    = lt_hex ).
         ENDLOOP.
 
-      CATCH cx_bcs INTO DATA(lo_error).
+      CATCH cx_bcs cx_bcom_mime INTO DATA(lo_error).
         RAISE EXCEPTION TYPE zcx_shk_mail
           EXPORTING iv_text  = lo_error->get_text( )
                     previous = lo_error.
     ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD build_html_with_attachments.
+    " BCS writes a body next to attachments as Content-Disposition: inline, and some
+    " webmail clients show such a part twice. A ready MIME document (MHT) goes out unchanged.
+    DATA ls_part TYPE mime_body.
+    DATA lv_size TYPE so_obj_len.
+
+    DATA(lo_mixed) = NEW cl_bcom_mime_multi_mixed( ).
+    lo_mixed->set_codepage( c_utf8 ).
+
+    DATA(lo_html) = NEW cl_bcom_mime_single_text( ).
+    lo_html->set_codepage( c_utf8 ).
+    lo_html->set_extension( 'HTM' ).
+    lo_html->set_content_type( 'text/html' ).
+    lo_html->set_flag_first_bodypart( ).
+    lo_html->set_content( cl_bcs_convert=>string_to_soli( mv_body ) ).
+    ls_part-bodypart = lo_html.
+    lo_mixed->add_bodypart( ls_part ).
+
+    LOOP AT mt_attachments INTO DATA(ls_att).
+      DATA(lo_file) = NEW cl_bcom_mime_single_binary( ).
+      lo_file->set_content_type( CONV #( ls_att-mimetype ) ).
+      lo_file->set_filename( ls_att-filename ).
+      lo_file->set_content_xstring( ls_att-content ).
+
+      CLEAR ls_part.
+      ls_part-bodypart           = lo_file.
+      ls_part-dispositn-type     = cl_bcom_mime_multi_mixed=>c_body_disp_attachment.
+      ls_part-dispositn-filename = ls_att-filename.
+      lo_mixed->add_bodypart( ls_part ).
+    ENDLOOP.
+
+    DATA(lv_mime) = lo_mixed->if_bcom_mime~as_mime( ).
+    lv_size = xstrlen( lv_mime ).
+
+    ro_document = cl_document_bcs=>create_document(
+      i_type       = 'MHT'
+      i_hex        = cl_bcs_convert=>xstring_to_solix( lv_mime )
+      i_length     = lv_size
+      i_subject    = CONV so_obj_des( mv_subject )
+      i_importance = mv_importance ).
+
   ENDMETHOD.
 
 
