@@ -93,6 +93,8 @@ LOOP AT lo_ftp->zif_shk_ftp~list_files( iv_mask = '*.edi' ) INTO DATA(ls_file).
   DATA(lv_edi) = lo_ftp->zif_shk_ftp~download( ls_file-name ).
 ENDLOOP.
 lo_ftp->zif_shk_ftp~upload( iv_remote_path = 'export.csv' iv_content = lv_xstring ).
+" create_directory: creates every missing level (like mkdir -p); an existing folder is fine
+lo_ftp->zif_shk_ftp~create_directory( 'Archive' ).
 lo_ftp->zif_shk_ftp~rename_file( iv_from = 'export.csv' iv_to = 'Archive/export.csv' ).
 lo_ftp->zif_shk_ftp~disconnect( ).
 ```
@@ -137,6 +139,10 @@ ENDIF.
 
 " Stop it again: deletes scheduled/released instances, leaves a running one alone
 DATA(lv_deleted) = lo_job->zif_shk_job~delete_scheduled( 'ZDISPATCH' ).
+
+" Housekeeping: delete finished runs that ended more than 24 hours ago (* = any text);
+" cancelled jobs are kept for analysis
+DATA(lv_removed) = lo_job->zif_shk_job~delete_finished( iv_name = 'ZWORKER_*' iv_older_hours = 24 ).
 ```
 
 ### Date
