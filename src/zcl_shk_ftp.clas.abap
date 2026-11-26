@@ -55,6 +55,10 @@ public section.
         VALUE(rt_result) TYPE string_table
       RAISING
         zcx_shk_ftp.
+
+    METHODS working_directory
+      RETURNING
+        VALUE(rv_directory) TYPE string.
 ENDCLASS.
 
 
@@ -203,6 +207,44 @@ CLASS ZCL_SHK_FTP IMPLEMENTATION.
 
   METHOD zif_shk_ftp~command.
     rt_result = run_command( iv_command ).
+  ENDMETHOD.
+
+
+  METHOD zif_shk_ftp~create_directory.
+    DATA lx_mkdir TYPE REF TO zcx_shk_ftp.
+
+    DATA(lv_target) = condense( CONV string( iv_directory ) ).
+    IF lv_target IS INITIAL.
+      RETURN.
+    ENDIF.
+
+    DATA(lv_home) = working_directory( ).
+    TRY.
+        run_command( |cd { lv_target }| ).
+      CATCH zcx_shk_ftp.
+        " mkdir makes one level at a time and fails on a level that already exists
+        SPLIT lv_target AT '/' INTO TABLE DATA(lt_parts).
+        DATA(lv_path) = COND string( WHEN substring( val = lv_target len = 1 ) = '/' THEN `` ELSE `.` ).
+        LOOP AT lt_parts INTO DATA(lv_part) WHERE table_line IS NOT INITIAL.
+          lv_path = |{ lv_path }/{ lv_part }|.
+          TRY.
+              run_command( |mkdir { lv_path }| ).
+            CATCH zcx_shk_ftp INTO lx_mkdir ##NO_HANDLER.
+          ENDTRY.
+        ENDLOOP.
+        TRY.
+            run_command( |cd { lv_target }| ).
+          CATCH zcx_shk_ftp INTO DATA(lx_cd).
+            IF lx_mkdir IS BOUND.
+              RAISE EXCEPTION lx_mkdir.
+            ENDIF.
+            RAISE EXCEPTION lx_cd.
+        ENDTRY.
+    ENDTRY.
+
+    IF lv_home IS NOT INITIAL.
+      run_command( |cd { lv_home }| ).
+    ENDIF.
   ENDMETHOD.
 
 
@@ -391,6 +433,20 @@ CLASS ZCL_SHK_FTP IMPLEMENTATION.
   ENDMETHOD.
 
 
+  METHOD working_directory.
+    " pwd answers: 257 "/dir" is current directory.
+    TRY.
+        DATA(lt_reply) = run_command( 'pwd' ).
+      CATCH zcx_shk_ftp.
+        RETURN.
+    ENDTRY.
+    LOOP AT lt_reply INTO DATA(lv_line) WHERE table_line CS '"'.
+      SPLIT lv_line AT '"' INTO DATA(lv_before) rv_directory DATA(lv_after).
+      RETURN.
+    ENDLOOP.
+  ENDMETHOD.
+
+
   METHOD zif_shk_ftp~set_passive.
     IF iv_on = abap_true.
       run_command( 'set passive on' ).
@@ -454,3 +510,4 @@ CLASS ZCL_SHK_FTP IMPLEMENTATION.
       iv_overwrite   = iv_overwrite ).
   ENDMETHOD.
 ENDCLASS.
+

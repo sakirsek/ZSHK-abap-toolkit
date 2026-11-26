@@ -63,6 +63,17 @@ INTERFACE zif_shk_job PUBLIC.
     RETURNING
       VALUE(rv_scheduled) TYPE abap_bool.
 
+  "! Deletes finished jobs (status F) whose name matches the pattern (* = any text)
+  "! and that ended more than the given number of hours ago. Best effort: a job that
+  "! cannot be deleted is skipped. Returns the number of deleted jobs.
+  METHODS delete_finished
+    IMPORTING
+      iv_name           TYPE clike
+      iv_older_hours    TYPE i
+      iv_max_jobs       TYPE i DEFAULT 200
+    RETURNING
+      VALUE(rv_deleted) TYPE i.
+
   METHODS delete_scheduled
     IMPORTING
       iv_name           TYPE btcjob

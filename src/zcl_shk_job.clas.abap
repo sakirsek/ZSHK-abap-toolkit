@@ -54,6 +54,46 @@ CLASS ZCL_SHK_JOB IMPLEMENTATION.
   ENDMETHOD.
 
 
+  METHOD zif_shk_job~delete_finished.
+    DATA lv_pattern TYPE string.
+
+    lv_pattern = condense( CONV string( iv_name ) ).
+    REPLACE ALL OCCURRENCES OF '#' IN lv_pattern WITH '##'.
+    REPLACE ALL OCCURRENCES OF '_' IN lv_pattern WITH '#_'.
+    REPLACE ALL OCCURRENCES OF '%' IN lv_pattern WITH '#%'.
+    REPLACE ALL OCCURRENCES OF '*' IN lv_pattern WITH '%'.
+
+    " TBTCO holds server date and time, so the limit is built from sy-datum / sy-uzeit
+    DATA(lv_date) = CONV d( sy-datum - iv_older_hours DIV 24 ).
+    DATA(lv_seconds) = CONV i( sy-uzeit ) - ( iv_older_hours MOD 24 ) * 3600.
+    IF lv_seconds < 0.
+      lv_seconds = lv_seconds + 86400.
+      lv_date = lv_date - 1.
+    ENDIF.
+    DATA(lv_time) = CONV t( lv_seconds ).
+
+    SELECT jobname, jobcount FROM tbtco
+      WHERE jobname LIKE @lv_pattern ESCAPE '#'
+        AND status = 'F'
+        AND ( enddate < @lv_date OR ( enddate = @lv_date AND endtime < @lv_time ) )
+      ORDER BY enddate, endtime
+      INTO TABLE @DATA(lt_jobs)
+      UP TO @iv_max_jobs ROWS.
+
+    LOOP AT lt_jobs INTO DATA(ls_job).
+      CALL FUNCTION 'BP_JOB_DELETE'
+        EXPORTING
+          jobcount = ls_job-jobcount
+          jobname  = ls_job-jobname
+        EXCEPTIONS
+          OTHERS   = 1.
+      IF sy-subrc = 0.
+        rv_deleted = rv_deleted + 1.
+      ENDIF.
+    ENDLOOP.
+  ENDMETHOD.
+
+
   METHOD zif_shk_job~delete_scheduled.
     " P scheduled, S released, Z released/suspended; ready and active jobs are left alone
     SELECT jobcount FROM tbtco
@@ -281,3 +321,4 @@ CLASS ZCL_SHK_JOB IMPLEMENTATION.
     CLEAR: mt_steps, ms_schedule.
   ENDMETHOD.
 ENDCLASS.
+

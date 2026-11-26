@@ -102,6 +102,14 @@ INTERFACE zif_shk_ftp PUBLIC.
     RAISING
       zcx_shk_ftp.
 
+  "! Creates the directory with every missing parent (like mkdir -p).
+  "! An existing directory is fine; the working directory stays where it was.
+  METHODS create_directory
+    IMPORTING
+      iv_directory TYPE clike
+    RAISING
+      zcx_shk_ftp.
+
   METHODS command
     IMPORTING
       iv_command       TYPE clike
